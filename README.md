@@ -1,6 +1,6 @@
 <div align="center">
 
-![Veloera-CE Logo](https://img.cdn1.vip/i/695929a70c0bc_1767451047.webp)
+![Veloera-CE Logo]([https://img.cdn1.vip/i/695929a70c0bc_1767451047.webp](https://cloudflareimg.cdn.sn/i/695929a70c0bc_1767451047.webp))
 
 
 # Veloera CE
