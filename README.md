@@ -1,6 +1,8 @@
 <div align="center">
 
-![Veloera-CE Logo](https://cloudflareimg.cdn.sn/i/695929a70c0bc_1767451047.webp)
+<img src="https://cloudflareimg.cdn.sn/i/695929a70c0bc_1767451047.webp" 
+     alt="Veloera-CE Logo" 
+     width="200">
 
 
 # Veloera CE
