@@ -29,6 +29,6 @@
 
 ### 版本特性
 
-1.更好的套餐系统
-2.更商业化的UI
-3.Linux Do Credit支持
+1.更好的套餐系统<br>
+2.更商业化的UI<br>
+3.Linux Do Credit支持<br>
