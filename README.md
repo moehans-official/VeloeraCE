@@ -6,7 +6,7 @@
 
 
 # Veloera CE
-**高性能、可扩展的轻量级 LLM API 网关**
+**由社区维护的Veloera版本**
 
 简体中文 / [English](./README_EN.md)
 
