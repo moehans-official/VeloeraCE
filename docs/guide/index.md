@@ -1,12 +1,17 @@
-# 文档总览
+﻿# 文档总览
 
-这里是 VeloeraCE 官方文档区。
+欢迎使用 VeloeraCE 文档站。
 
-## 目录
+## 建议阅读顺序
 
-- [快速开始](./getting-started.md)
-- API 参考（预留）：[/api/](/api/)
+1. [快速开始](./getting-started.md)
+2. [部署指南](./deployment.md)
+3. [API 概览](/api/)
 
-## 说明
+## 文档说明
 
-该文档区已搭好结构，后续可按模块逐步补充。
+当前文档聚焦于：
+
+- 本地快速运行
+- Docker Compose 部署
+- 基础生产部署建议

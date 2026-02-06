@@ -1,24 +1,43 @@
-# 快速开始
+﻿# 快速开始
 
-本文档为预留模板，后续可替换为完整步骤。
+本文用于快速跑通 VeloeraCE。
 
-## 1. 部署网关
+## 环境要求
 
-- 准备运行环境
-- 配置基础参数
-- 启动服务并验证
+- Go 1.23+
+- Node.js 20+
+- pnpm 10+
+- Docker / Docker Compose（推荐）
 
-## 2. 接入模型提供商
+## 方式一：Docker Compose（推荐）
 
-- 添加 provider 配置
-- 配置路由策略
-- 验证 API 可用性
+```bash
+git clone https://github.com/moehans-official/VeloeraCE.git
+cd VeloeraCE
+cp .env.example .env
+docker build -t veloerace:local .
+# 修改 docker-compose.yml 中 image 为 veloerace:local
+docker compose up -d
+```
 
-## 3. 客户端对接
+验证：
 
-- 使用统一接口地址
-- 按模型或策略发起调用
+```bash
+curl http://localhost:3000/api/healthz
+curl http://localhost:3000/api/readyz
+```
 
----
+## 方式二：本地开发
 
-> 该页面为文档预留结构。
+```bash
+# 前端
+cd web
+pnpm install
+pnpm run build
+
+# 后端
+cd ..
+go run main.go
+```
+
+默认服务地址：`http://localhost:3000`
