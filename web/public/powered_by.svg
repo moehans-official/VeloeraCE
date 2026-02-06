@@ -1,0 +1,59 @@
+﻿<svg width="186" height="32" viewBox="0 0 186 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ff6b35"/>
+      <stop offset="100%" style="stop-color:#ff8c42"/>
+    </linearGradient>
+
+    <style>
+      .badge-bg {
+        fill: var(--veloera-badge-bg, #f8f9fa);
+        stroke: var(--veloera-badge-border, #e9ecef);
+        stroke-width: 1;
+      }
+
+      .badge-text {
+        fill: var(--veloera-badge-text, #495057);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      .brand-text {
+        fill: url(#orangeGradient);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .badge-icon {
+        fill: url(#orangeGradient);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .badge-bg {
+          fill: var(--veloera-badge-bg, #2d3748);
+          stroke: var(--veloera-badge-border, #4a5568);
+        }
+
+        .badge-text {
+          fill: var(--veloera-badge-text, #e2e8f0);
+        }
+      }
+    </style>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="185" height="31" rx="6" ry="6" class="badge-bg"/>
+
+  <g class="badge-icon">
+    <path d="M12 12 L16 20 L20 12" stroke="url(#orangeGradient)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="16" cy="11" r="1.5"/>
+  </g>
+
+  <text x="28" y="20" class="badge-text">Powered by</text>
+  <text x="92" y="20" class="brand-text">VeloeraCE</text>
+
+  <circle cx="171" cy="16" r="2" class="badge-icon" opacity="0.6"/>
+  <circle cx="176" cy="12" r="1" class="badge-icon" opacity="0.4"/>
+  <circle cx="176" cy="20" r="1" class="badge-icon" opacity="0.4"/>
+</svg>

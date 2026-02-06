@@ -1,0 +1,250 @@
+// Copyright (c) 2025 Tethys Plex
+//
+// This file is part of Veloera.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+package vertex
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/gin-gonic/gin"
+	"io"
+	"net/http"
+	"strings"
+	"veloera/dto"
+	"veloera/relay/channel"
+	"veloera/relay/channel/claude"
+	"veloera/relay/channel/gemini"
+	"veloera/relay/channel/openai"
+	relaycommon "veloera/relay/common"
+)
+
+const (
+	RequestModeClaude = 1
+	RequestModeGemini = 2
+	RequestModeLlama  = 3
+)
+
+var claudeModelMap = map[string]string{
+	"claude-3-sonnet-20240229":   "claude-3-sonnet@20240229",
+	"claude-3-opus-20240229":     "claude-3-opus@20240229",
+	"claude-3-haiku-20240307":    "claude-3-haiku@20240307",
+	"claude-3-5-sonnet-20240620": "claude-3-5-sonnet@20240620",
+	"claude-3-5-sonnet-20241022": "claude-3-5-sonnet-v2@20241022",
+	"claude-3-7-sonnet-20250219": "claude-3-7-sonnet@20250219",
+	"claude-sonnet-4-20250514":   "claude-sonnet-4@20250514",
+	"claude-opus-4-20250514":     "claude-opus-4@20250514",
+}
+
+const anthropicVersion = "vertex-2023-10-16"
+
+type Adaptor struct {
+	RequestMode        int
+	AccountCredentials Credentials
+}
+
+func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.ClaudeRequest) (any, error) {
+	if v, ok := claudeModelMap[info.UpstreamModelName]; ok {
+		c.Set("request_model", v)
+	} else {
+		c.Set("request_model", request.Model)
+	}
+	vertexClaudeReq := copyRequest(request, anthropicVersion)
+	return vertexClaudeReq, nil
+}
+
+func (a *Adaptor) ConvertAudioRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.AudioRequest) (io.Reader, error) {
+	//TODO implement me
+	return nil, errors.New("not implemented")
+}
+
+func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.ImageRequest) (any, error) {
+	//TODO implement me
+	return nil, errors.New("not implemented")
+}
+
+func (a *Adaptor) Init(info *relaycommon.RelayInfo) {
+	if strings.HasPrefix(info.UpstreamModelName, "claude") {
+		a.RequestMode = RequestModeClaude
+	} else if strings.HasPrefix(info.UpstreamModelName, "gemini") {
+		a.RequestMode = RequestModeGemini
+	} else if strings.Contains(info.UpstreamModelName, "llama") {
+		a.RequestMode = RequestModeLlama
+	}
+}
+
+func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
+	adc := &Credentials{}
+	if err := json.Unmarshal([]byte(info.ApiKey), adc); err != nil {
+		return "", fmt.Errorf("failed to decode credentials file: %w", err)
+	}
+	region := GetModelRegion(info.ApiVersion, info.OriginModelName)
+	a.AccountCredentials = *adc
+	suffix := ""
+	if a.RequestMode == RequestModeGemini {
+		if info.IsStream {
+			suffix = "streamGenerateContent?alt=sse"
+		} else {
+			suffix = "generateContent"
+		}
+		if region == "global" {
+			return fmt.Sprintf(
+				"https://aiplatform.googleapis.com/v1/projects/%s/locations/global/publishers/google/models/%s:%s",
+				adc.ProjectID,
+				info.UpstreamModelName,
+				suffix,
+			), nil
+		} else {
+			return fmt.Sprintf(
+				"https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:%s",
+				region,
+				adc.ProjectID,
+				region,
+				info.UpstreamModelName,
+				suffix,
+			), nil
+		}
+	} else if a.RequestMode == RequestModeClaude {
+		if info.IsStream {
+			suffix = "streamRawPredict?alt=sse"
+		} else {
+			suffix = "rawPredict"
+		}
+		model := info.UpstreamModelName
+		if v, ok := claudeModelMap[info.UpstreamModelName]; ok {
+			model = v
+		}
+		return fmt.Sprintf(
+			"https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/anthropic/models/%s:%s",
+			region,
+			adc.ProjectID,
+			region,
+			model,
+			suffix,
+		), nil
+	} else if a.RequestMode == RequestModeLlama {
+		return fmt.Sprintf(
+			"https://%s-aiplatform.googleapis.com/v1beta1/projects/%s/locations/%s/endpoints/openapi/chat/completions",
+			region,
+			adc.ProjectID,
+			region,
+		), nil
+	}
+	return "", errors.New("unsupported request mode")
+}
+
+func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Header, info *relaycommon.RelayInfo) error {
+	channel.SetupApiRequestHeader(info, c, req)
+	accessToken, err := getAccessToken(a, info)
+	if err != nil {
+		return err
+	}
+	req.Set("Authorization", "Bearer "+accessToken)
+	return nil
+}
+
+func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.GeneralOpenAIRequest) (any, error) {
+	if request == nil {
+		return nil, errors.New("request is nil")
+	}
+	if a.RequestMode == RequestModeClaude {
+		claudeReq, err := claude.RequestOpenAI2ClaudeMessage(*request)
+		if err != nil {
+			return nil, err
+		}
+		vertexClaudeReq := copyRequest(claudeReq, anthropicVersion)
+		c.Set("request_model", claudeReq.Model)
+		info.UpstreamModelName = claudeReq.Model
+		return vertexClaudeReq, nil
+	} else if a.RequestMode == RequestModeGemini {
+		geminiRequest, err := gemini.CovertGemini2OpenAI(*request, info)
+		if err != nil {
+			return nil, err
+		}
+		c.Set("request_model", request.Model)
+		return geminiRequest, nil
+	} else if a.RequestMode == RequestModeLlama {
+		return request, nil
+	}
+	return nil, errors.New("unsupported request mode")
+}
+
+func (a *Adaptor) ConvertRerankRequest(c *gin.Context, relayMode int, request dto.RerankRequest) (any, error) {
+	return nil, nil
+}
+
+func (a *Adaptor) ConvertEmbeddingRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.EmbeddingRequest) (any, error) {
+	//TODO implement me
+	return nil, errors.New("not implemented")
+}
+
+func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.OpenAIResponsesRequest) (any, error) {
+	// TODO implement me
+	return nil, errors.New("not implemented")
+}
+
+func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, requestBody io.Reader) (any, error) {
+	return channel.DoApiRequest(a, c, info, requestBody)
+}
+
+func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *dto.OpenAIErrorWithStatusCode) {
+	if info.IsStream {
+		switch a.RequestMode {
+		case RequestModeClaude:
+			err, usage = claude.ClaudeStreamHandler(c, resp, info, claude.RequestModeMessage)
+		case RequestModeGemini:
+			err, usage = gemini.GeminiChatStreamHandler(c, resp, info)
+		case RequestModeLlama:
+			err, usage = openai.OaiStreamHandler(c, resp, info)
+		}
+	} else {
+		switch a.RequestMode {
+		case RequestModeClaude:
+			err, usage = claude.ClaudeHandler(c, resp, claude.RequestModeMessage, info)
+		case RequestModeGemini:
+			err, usage = gemini.GeminiChatHandler(c, resp, info)
+		case RequestModeLlama:
+			err, usage = openai.OpenaiHandler(c, resp, info)
+		}
+	}
+	return
+}
+
+func (a *Adaptor) GetModelList() []string {
+	var modelList []string
+	for i, s := range ModelList {
+		modelList = append(modelList, s)
+		ModelList[i] = s
+	}
+	for i, s := range claude.ModelList {
+		modelList = append(modelList, s)
+		claude.ModelList[i] = s
+	}
+	for i, s := range gemini.ModelList {
+		modelList = append(modelList, s)
+		gemini.ModelList[i] = s
+	}
+	return modelList
+}
+
+func (a *Adaptor) GetChannelName() string {
+	return ChannelName
+}
+
+// SupportsOpenAIPassThrough reports whether the current request mode accepts OpenAI-compatible payloads.
+func (a *Adaptor) SupportsOpenAIPassThrough(*relaycommon.RelayInfo) bool {
+	return a.RequestMode == RequestModeLlama
+}

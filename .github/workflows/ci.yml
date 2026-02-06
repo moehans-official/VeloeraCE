@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-test:
+    name: Backend Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Prepare embed assets
+        run: |
+          mkdir -p web/dist
+          if [ ! -f web/dist/index.html ]; then
+            echo '<!doctype html><html><body></body></html>' > web/dist/index.html
+          fi
+
+      - name: Run tests
+        run: |
+          packages=$(go list ./... | grep -v '^veloera$')
+          go test $packages
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: VITE_REACT_APP_VERSION=${GITHUB_SHA::7} pnpm run build

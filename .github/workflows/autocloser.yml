@@ -1,0 +1,15 @@
+name: Autocloser
+on: [issues, pull_request]
+jobs:
+  autoclose:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Autocloser
+      uses: roots/issue-closer@v1.1
+      with:
+        repo-token: ${{ secrets.PAT }}
+        issue-close-message: "@${issue.user.login} this project is no longer being maintained. So I'm closing this issue. Please feel free to reopen it if you think it is important enrough to keep it."
+        issue-pattern: ".*e12a692c-4ea2-46ef-997f-d543d684b1df.*"
+        pr-close-message: "@${issue.user.login} this project is no longer being maintained. So I'm closing this PR. Please feel free to reopen it if you think it is important enrough to keep it."
+        pr-pattern: ".*e12a692c-4ea2-46ef-997f-d543d684b1df.*"
+        

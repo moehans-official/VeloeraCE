@@ -1,0 +1,25 @@
+/* SideSheet */
+
+.semi-sidesheet-left .semi-sidesheet-inner-wrap, .semi-sidesheet-right .semi-sidesheet-inner-wrap {
+    height: 98% !important;
+}
+
+.semi-sidesheet-inner {
+    margin: 15px !important;
+    border-radius: 15px !important;
+}
+
+/* Switch */
+
+.semi-switch-checked .semi-switch-knob {
+	transform: translateX(28px) !important;
+}
+
+.semi-switch-knob {
+	border-radius: 5px !important;
+}
+
+.semi-switch {
+	border-radius: 7px !important;
+	width: 50px !important;
+}

@@ -1,27 +1,136 @@
-<div align="center">
-
-<img src="https://cloudflareimg.cdn.sn/i/695929a70c0bc_1767451047.webp" 
-     alt="Veloera-CE Logo" 
-     width="200">
-
-# Veloera CE
-**High-Performance, Scalable Lightweight LLM API Gateway**
-
-English / [简体中文](./README.md)
-
-[![License](https://img.shields.io/badge/license-MIT%202.0-blue.svg)](LICENSE)
-
+﻿<div align="center">
+  <img src="https://cloudflareimg.cdn.sn/i/695929a70c0bc_1767451047.webp" alt="Veloera CE Logo" width="180" />
+  <h1>VeloeraCE</h1>
+  <p>Community-maintained Veloera, optimized for production operations</p>
+  <p>
+    <a href="./README.md">简体中文</a> | English
+  </p>
+  <p>
+    <a href="./LICENSE"><img alt="License: GPLv3" src="https://img.shields.io/badge/License-GPLv3-orange.svg" /></a>
+    <img alt="Go" src="https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go" />
+    <img alt="Node" src="https://img.shields.io/badge/Node-20+-339933?logo=node.js" />
+    <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker" />
+  </p>
 </div>
 
----
+## Overview
 
-## Project Introduction
+`VeloeraCE (Community Edition)` is a community-driven LLM API gateway evolved from `Veloera`.
 
-**Veloera CE (Community Edition)** is a third-party open-source LLM API gateway developed and maintained by the community, based on Veloera and new-api.<br>
+Project goals:
 
-### Related Links
+- Sustain and maintain core upstream capabilities
+- Improve reliability and operability in production
+- Build a transparent, contributor-friendly community workflow
 
-- [**Veloera Original Repository**](https://github.com/Veloera/Veloera)  
-- [**new-api Repository**](https://github.com/QuantumNous/new-api)
+Upstream projects:
 
-In an era of multiple AI models coexisting, Veloera CE aims to address the pain points of API integration fragmentation. It serves as a relay bridge between the application layer and underlying model providers (such as OpenAI, Anthropic, Google Gemini, DeepSeek, ERNIE Bot, etc.), providing unified standard interfaces, load balancing, and resource monitoring capabilities.
+- Veloera: <https://github.com/Veloera/Veloera>
+- new-api: <https://github.com/QuantumNous/new-api>
+
+## Core Features
+
+- Unified OpenAI-compatible API layer
+- Multi-channel model routing
+- Web admin console (channels, users, tokens, logs, billing)
+- One-command Docker Compose deployment
+- Open contribution and review process
+
+## Tech Stack
+
+- Backend: Go + Gin + GORM
+- Frontend: React + Vite + Semi UI
+- Database: MySQL / PostgreSQL / SQLite (configurable)
+- Cache: Redis (optional)
+
+## Quick Start
+
+### Option 1: Docker Compose (Recommended)
+
+1. Clone repository
+
+```bash
+git clone https://github.com/moehans-official/VeloeraCE.git
+cd VeloeraCE
+```
+
+2. Prepare environment variables
+
+```bash
+cp .env.example .env
+```
+
+3. Build local image (recommended to run current CE source)
+
+```bash
+docker build -t veloerace:local .
+```
+
+4. Update `veloera.image` in `docker-compose.yml` to `veloerace:local`
+
+5. Start services
+
+```bash
+docker compose up -d
+```
+
+6. Verify health
+
+```bash
+curl http://localhost:3000/api/healthz
+curl http://localhost:3000/api/readyz
+```
+
+Default URL: `http://localhost:3000`
+
+### Option 2: Local Development
+
+1. Build frontend assets (embedded by backend)
+
+```bash
+cd web
+pnpm install
+pnpm run build
+cd ..
+```
+
+2. Start backend
+
+```bash
+go run main.go
+```
+
+3. Run frontend dev server (optional)
+
+```bash
+cd web
+pnpm run dev
+```
+
+## Ops and Health Probes
+
+- Liveness: `GET /api/healthz`
+- Readiness: `GET /api/readyz` (checks DB/Redis)
+
+Hardening env vars (partial list):
+
+- `TRUSTED_PROXIES`
+- `SERVER_READ_TIMEOUT`
+- `SERVER_WRITE_TIMEOUT`
+- `SERVER_IDLE_TIMEOUT`
+- `SERVER_SHUTDOWN_TIMEOUT`
+- `SECURITY_HSTS_MAX_AGE`
+- `SECURITY_HSTS_FORCE`
+- `SECURITY_CONTENT_SECURITY_POLICY`
+
+## Community
+
+- Contribution guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
+- Governance: [`GOVERNANCE.md`](./GOVERNANCE.md)
+- Code of conduct: [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
+- Roadmap: [`docs/ROADMAP.md`](./docs/ROADMAP.md)
+- Enterprise optimization plan: [`docs/ENTERPRISE_OPTIMIZATION.md`](./docs/ENTERPRISE_OPTIMIZATION.md)
+
+## License
+
+Licensed under [`GNU GPLv3`](./LICENSE).
