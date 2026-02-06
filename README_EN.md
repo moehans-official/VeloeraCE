@@ -123,14 +123,6 @@ Hardening env vars (partial list):
 - `SECURITY_HSTS_FORCE`
 - `SECURITY_CONTENT_SECURITY_POLICY`
 
-## Community
-
-- Contribution guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
-- Governance: [`GOVERNANCE.md`](./GOVERNANCE.md)
-- Code of conduct: [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
-- Roadmap: [`docs/ROADMAP.md`](./docs/ROADMAP.md)
-- Enterprise optimization plan: [`docs/ENTERPRISE_OPTIMIZATION.md`](./docs/ENTERPRISE_OPTIMIZATION.md)
-
 ## License
 
 Licensed under [`GNU GPLv3`](./LICENSE).

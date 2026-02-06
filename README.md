@@ -121,14 +121,6 @@ pnpm run dev
 - `SECURITY_HSTS_FORCE`
 - `SECURITY_CONTENT_SECURITY_POLICY`
 
-## 社区协作
-
-- 贡献指南：[`CONTRIBUTING.md`](./CONTRIBUTING.md)
-- 社区治理：[`GOVERNANCE.md`](./GOVERNANCE.md)
-- 行为准则：[`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
-- 路线图：[`docs/ROADMAP.md`](./docs/ROADMAP.md)
-- 企业级优化计划：[`docs/ENTERPRISE_OPTIMIZATION.md`](./docs/ENTERPRISE_OPTIMIZATION.md)
-
 ## License
 
 本项目采用 [`GNU GPLv3`](./LICENSE) 许可证。
