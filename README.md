@@ -10,7 +10,8 @@
 
 简体中文 / [English](./README_EN.md)
 
-[![License](https://img.shields.io/badge/license-MIT%202.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-GPLv3-orange.svg
+)](LICENSE)
 
 </div>
 
@@ -26,9 +27,3 @@
 - [**new-api 仓库**](https://github.com/QuantumNous/new-api)
 
 在多模型并存的时代，Veloera CE 致力于解决 API 集成碎片化的痛点。它充当了应用层与底层模型厂商（如 OpenAI、Anthropic、Google Gemini、DeepSeek、文心一言等）之间的中转桥梁，提供统一的标准接口、负载均衡与资源监控功能。
-
-### 版本特性
-
-1.更好的套餐系统<br>
-2.更商业化的UI<br>
-3.Linux Do Credit支持<br>
