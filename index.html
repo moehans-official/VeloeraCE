@@ -1,0 +1,126 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VeloeraCE</title>
+  <meta name="description" content="VeloeraCE Community Edition" />
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --panel: #111214;
+      --line: #26272b;
+      --text: #f3f3f4;
+      --muted: #a6a7ad;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", "Noto Sans SC", sans-serif;
+      color: var(--text);
+      background: radial-gradient(1100px 520px at 10% -12%, #1c1c1f 0%, transparent 58%), var(--bg);
+    }
+
+    .wrap {
+      width: min(980px, 92vw);
+      margin: 0 auto;
+      padding: 56px 0;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      padding: 30px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.6rem);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+    }
+
+    p {
+      margin: 14px 0 0;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .actions {
+      margin-top: 26px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    a.button {
+      text-decoration: none;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-weight: 700;
+    }
+
+    a.primary {
+      background: #fff;
+      color: #0f0f10;
+    }
+
+    a.secondary {
+      border: 1px solid var(--line);
+      color: var(--text);
+      background: transparent;
+    }
+
+    .meta {
+      margin-top: 28px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1 id="title">VeloeraCE</h1>
+      <p id="desc-en">Veloera Community Edition for modern LLM API gateway scenarios.</p>
+      <p id="desc-zh" hidden>Veloera 社区版本，面向现代 LLM API 网关场景。</p>
+
+      <div class="actions">
+        <a class="button primary" href="https://github.com/moehans-official/VeloeraCE" target="_blank" rel="noopener noreferrer" id="repo-btn">Repository</a>
+        <a class="button secondary" href="https://github.com/moehans-official/VeloeraCE/blob/main/README.md" target="_blank" rel="noopener noreferrer" id="readme-btn">README</a>
+      </div>
+
+      <div class="meta">
+        <p id="meta-en">Official project page for VeloeraCE.</p>
+        <p id="meta-zh" hidden>VeloeraCE 官方项目页面。</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      var langs = (navigator.languages || [navigator.language || 'en']).map(function (x) {
+        return String(x || '').toLowerCase();
+      });
+      var isZh = langs.some(function (lang) { return lang.indexOf('zh') === 0; });
+
+      document.documentElement.lang = isZh ? 'zh-CN' : 'en';
+      document.title = isZh ? 'VeloeraCE | 社区版本' : 'VeloeraCE | Community Edition';
+
+      if (isZh) {
+        document.getElementById('desc-en').hidden = true;
+        document.getElementById('meta-en').hidden = true;
+        document.getElementById('desc-zh').hidden = false;
+        document.getElementById('meta-zh').hidden = false;
+        document.getElementById('repo-btn').textContent = '仓库';
+        document.getElementById('readme-btn').textContent = '说明文档';
+      }
+    })();
+  </script>
+</body>
+</html>
