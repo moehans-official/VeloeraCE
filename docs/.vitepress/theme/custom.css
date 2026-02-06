@@ -1,0 +1,46 @@
+:root {
+  --vp-c-bg: #0a0b0f;
+  --vp-c-bg-soft: #111218;
+  --vp-c-bg-alt: #0f1015;
+  --vp-c-text-1: #f4f5f7;
+  --vp-c-text-2: #a8adba;
+  --vp-c-text-3: #8b91a2;
+  --vp-c-divider: #252834;
+  --vp-c-brand-1: #f2f3f5;
+  --vp-c-brand-2: #ffffff;
+  --vp-c-brand-3: #d4d7de;
+  --vp-button-brand-bg: #f4f5f7;
+  --vp-button-brand-text: #101218;
+  --vp-button-brand-hover-bg: #ffffff;
+  --vp-button-alt-bg: transparent;
+  --vp-button-alt-border: #2b2f3c;
+  --vp-button-alt-text: #f2f4f7;
+}
+
+html,
+body {
+  background:
+    radial-gradient(900px 380px at 10% -10%, rgba(255, 255, 255, 0.09), transparent 58%),
+    var(--vp-c-bg);
+}
+
+.VPNavBar {
+  background: rgba(10, 11, 15, 0.82) !important;
+  backdrop-filter: blur(10px);
+}
+
+.VPHero .name,
+.VPHero .text {
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+
+.VPFeature {
+  border: 1px solid var(--vp-c-divider);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0));
+}
+
+.vp-doc h2,
+.vp-doc h3 {
+  letter-spacing: -0.01em;
+}
