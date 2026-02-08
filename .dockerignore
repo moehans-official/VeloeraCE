@@ -5,3 +5,8 @@
 .gitignore
 Makefile
 docs
+node_modules
+web/node_modules
+web/dist
+.dev
+web/.dev

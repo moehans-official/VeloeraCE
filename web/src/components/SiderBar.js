@@ -91,6 +91,7 @@ const routerMap = {
   token: '/app/tokens',
   redemption: '/admin/coupons',
   topup: '/app/wallet',
+  packageCenter: '/app/pricing',
   user: '/admin/users',
   log: '/app/logs/api-usage',
   midjourney: '/app/logs/drawing',
@@ -102,6 +103,7 @@ const routerMap = {
   playground: '/playground',
   personal: '/app/me',
   message: '/admin/messages',
+  packageManage: '/admin/packages',
 };
 
 const SiderBar = () => {
@@ -128,6 +130,7 @@ const SiderBar = () => {
       'token',
       'redemption',
       'topup',
+      'packageCenter',
       'user',
       'log',
       'midjourney',
@@ -140,6 +143,7 @@ const SiderBar = () => {
       'playground',
       'personal',
       'message',
+      'packageManage',
     ];
     // 添加聊天项的keys
     for (let i = 0; i < chatItems.length; i++) {
@@ -217,6 +221,12 @@ const SiderBar = () => {
         icon: <IconCreditCard />,
       },
       {
+        text: t('套餐中心'),
+        itemKey: 'packageCenter',
+        to: '/app/pricing',
+        icon: <IconCreditCard />,
+      },
+      {
         text: t('个人设置'),
         itemKey: 'personal',
         to: '/app/me',
@@ -240,6 +250,13 @@ const SiderBar = () => {
         itemKey: 'redemption',
         to: '/admin/coupons',
         icon: <IconGift />,
+        className: isAdmin() ? '' : 'tableHiddle',
+      },
+      {
+        text: t('管理套餐'),
+        itemKey: 'packageManage',
+        to: '/admin/packages',
+        icon: <IconCreditCard />,
         className: isAdmin() ? '' : 'tableHiddle',
       },
       {
@@ -268,7 +285,7 @@ const SiderBar = () => {
   const chatMenuItems = useMemo(
     () => [
       {
-        text: 'Playground',
+        text: '操练场',
         itemKey: 'playground',
         to: '/playground',
         icon: <IconCommentStroked />,

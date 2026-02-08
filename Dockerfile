@@ -1,11 +1,12 @@
-FROM oven/bun:latest AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /build
-COPY web/package.json .
-RUN bun install
+COPY web/package.json web/pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
 COPY ./web .
 COPY ./VERSION .
-RUN DISABLE_ESLINT_PLUGIN='true' VITE_REACT_APP_VERSION=$(cat VERSION) bun run build
+ENV NODE_OPTIONS=--max-old-space-size=8192
+RUN DISABLE_ESLINT_PLUGIN='true' VITE_REACT_APP_VERSION=$(cat VERSION) pnpm run build
 
 FROM golang:alpine AS builder2
 

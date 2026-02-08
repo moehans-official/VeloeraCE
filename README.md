@@ -58,21 +58,7 @@ cd VeloeraCE
 cp .env.example .env
 ```
 
-3. 拉取预构建镜像（Docker Hub）
-
-```bash
-docker pull veloerace/veloerace:latest
-```
-
-4. 确认 `docker-compose.yml` 中 `veloera.image` 为 `veloerace/veloerace:latest`
-
-5. 启动服务
-
-```bash
-docker compose up -d
-```
-
-6. 检查状态
+3. 检查状态
 
 ```bash
 curl http://localhost:3000/api/healthz
