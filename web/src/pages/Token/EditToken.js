@@ -107,32 +107,85 @@ const EditToken = (props) => {
     setInputs({ ...inputs, unlimited_quota: !unlimited_quota });
   };
 
+  const normalizeModelOptions = (rawModels) => {
+    let modelList = [];
+    if (Array.isArray(rawModels)) {
+      modelList = rawModels;
+    } else if (rawModels && typeof rawModels === 'object') {
+      if (Array.isArray(rawModels.models)) {
+        modelList = rawModels.models;
+      } else {
+        modelList = Object.values(rawModels).reduce((acc, value) => {
+          if (Array.isArray(value)) {
+            return acc.concat(value);
+          }
+          return acc;
+        }, []);
+      }
+    }
+    return Array.from(
+      new Set(
+        modelList.filter(
+          (model) => typeof model === 'string' && model.trim().length > 0,
+        ),
+      ),
+    ).map((model) => ({
+      label: model,
+      value: model,
+    }));
+  };
+
   const loadModels = async () => {
-    let res = await API.get(`/api/user/models`);
-    const { success, message, data } = res.data;
-    if (success) {
-      let localModelOptions = data.map((model) => ({
-        label: model,
-        value: model,
-      }));
-      setModels(localModelOptions);
-    } else {
-      showError(t(message));
+    try {
+      const res = await API.get(`/api/user/models`);
+      const { success, message, data } = res.data || {};
+      if (success) {
+        setModels(normalizeModelOptions(data));
+        return;
+      }
+      showError(t(message || '加载模型失败'));
+      setModels([]);
+    } catch (_) {
+      try {
+        const fallbackRes = await API.get(`/api/models`);
+        const { success, message, data } = fallbackRes.data || {};
+        if (success) {
+          setModels(normalizeModelOptions(data));
+          return;
+        }
+        showError(t(message || '加载模型失败'));
+      } catch (error) {
+        showError(
+          error?.response?.data?.message || error?.message || t('加载模型失败'),
+        );
+      }
+      setModels([]);
     }
   };
 
   const loadGroups = async () => {
-    let res = await API.get(`/api/user/self/groups`);
-    const { success, message, data } = res.data;
-    if (success) {
-      let localGroupOptions = Object.entries(data).map(([group, info]) => ({
-        label: info.desc,
-        value: group,
-        ratio: info.ratio,
-      }));
-      setGroups(localGroupOptions);
-    } else {
-      showError(t(message));
+    try {
+      const res = await API.get(`/api/user/self/groups`);
+      const { success, message, data } = res.data || {};
+      if (success) {
+        const groupMap = data && typeof data === 'object' ? data : {};
+        const localGroupOptions = Object.entries(groupMap).map(
+          ([group, info]) => ({
+            label: info?.desc || group,
+            value: group,
+            ratio: info?.ratio,
+          }),
+        );
+        setGroups(localGroupOptions);
+      } else {
+        showError(t(message || '加载分组失败'));
+        setGroups([]);
+      }
+    } catch (error) {
+      showError(
+        error?.response?.data?.message || error?.message || t('加载分组失败'),
+      );
+      setGroups([]);
     }
   };
 

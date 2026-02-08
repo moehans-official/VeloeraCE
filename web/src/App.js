@@ -48,6 +48,8 @@ import Setup from './pages/Setup/index.js';
 import SetupCheck from './components/SetupCheck';
 import Inbox from './pages/Inbox';
 import Message from './pages/Message';
+import PackageCenter from './pages/PackageCenter';
+import PackageManage from './pages/PackageManage';
 import { AdminRoute } from './components/AdminRoute';
 
 const Home = lazy(() => import('./pages/Home'));
@@ -253,6 +255,16 @@ function App() {
           }
         />
         <Route
+          path='/app/pricing'
+          element={
+            <PrivateRoute>
+              <Suspense fallback={<Loading></Loading>} key={location.pathname}>
+                <PackageCenter />
+              </Suspense>
+            </PrivateRoute>
+          }
+        />
+        <Route
           path='/app/logs/api-usage'
           element={
             <PrivateRoute>
@@ -353,6 +365,16 @@ function App() {
             <AdminRoute>
               <Suspense fallback={<Loading></Loading>} key={location.pathname}>
                 <Message />
+              </Suspense>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path='/admin/packages'
+          element={
+            <AdminRoute>
+              <Suspense fallback={<Loading></Loading>} key={location.pathname}>
+                <PackageManage />
               </Suspense>
             </AdminRoute>
           }

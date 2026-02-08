@@ -29,6 +29,62 @@ import (
 	"veloera/middleware"
 )
 
+func runAuthAndHandle(c *gin.Context, authMiddleware func(c *gin.Context), handler func(c *gin.Context)) {
+	authMiddleware(c)
+	if c.IsAborted() {
+		return
+	}
+	handler(c)
+}
+
+// handlePlanAPINoRoute provides a compatibility fallback for plan routes when
+// a request unexpectedly falls through to NoRoute.
+func handlePlanAPINoRoute(c *gin.Context) bool {
+	path := c.Request.URL.Path
+	method := c.Request.Method
+
+	switch {
+	case method == http.MethodGet && (path == "/api/plan" || path == "/api/plan/"):
+		runAuthAndHandle(c, middleware.UserAuth(), controller.GetSubscriptionPlans)
+		return true
+	case method == http.MethodGet && (path == "/api/plan/self" || path == "/api/plan/self/"):
+		runAuthAndHandle(c, middleware.UserAuth(), controller.GetUserPlanOrders)
+		return true
+	case method == http.MethodGet && (path == "/api/plan/purchase" || path == "/api/plan/purchase/"):
+		controller.PurchaseSubscriptionPlanNotAllowed(c)
+		return true
+	case method == http.MethodPost && (path == "/api/plan/purchase" || path == "/api/plan/purchase/"):
+		runAuthAndHandle(c, middleware.UserAuth(), controller.PurchaseSubscriptionPlan)
+		return true
+	case path == "/api/plan/admin" || path == "/api/plan/admin/":
+		switch method {
+		case http.MethodGet:
+			runAuthAndHandle(c, middleware.AdminAuth(), controller.AdminGetSubscriptionPlans)
+			return true
+		case http.MethodPost:
+			runAuthAndHandle(c, middleware.AdminAuth(), controller.AdminCreateSubscriptionPlan)
+			return true
+		case http.MethodPut:
+			runAuthAndHandle(c, middleware.AdminAuth(), controller.AdminUpdateSubscriptionPlan)
+			return true
+		}
+	case method == http.MethodDelete && strings.HasPrefix(path, "/api/plan/admin/"):
+		id := strings.TrimPrefix(path, "/api/plan/admin/")
+		id = strings.Trim(id, "/")
+		if id == "" {
+			return false
+		}
+		c.Params = append(c.Params, gin.Param{
+			Key:   "id",
+			Value: id,
+		})
+		runAuthAndHandle(c, middleware.AdminAuth(), controller.AdminDeleteSubscriptionPlan)
+		return true
+	}
+
+	return false
+}
+
 // processCustomHead replaces the custom head placeholder with the stored custom_head_html content
 func processCustomHead(indexPage []byte) []byte {
 	common.OptionMapRWMutex.RLock()
@@ -59,6 +115,9 @@ func SetWebRouter(router *gin.Engine, buildFS embed.FS, indexPage []byte) {
 	router.GET("/custom/global.js", controller.GetCustomJS)
 
 	router.NoRoute(func(c *gin.Context) {
+		if handlePlanAPINoRoute(c) {
+			return
+		}
 		if strings.HasPrefix(c.Request.RequestURI, "/v1") || strings.HasPrefix(c.Request.RequestURI, "/api") || strings.HasPrefix(c.Request.RequestURI, "/assets") {
 			controller.RelayNotFound(c)
 			return

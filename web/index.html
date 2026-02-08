@@ -29,7 +29,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     />
     <title>VeloeraCE</title>
     <link rel="stylesheet" href="/custom/global.css" />
-    <script src="/custom/global.js"></script>
+    <script type="module">
+      const customScript = document.createElement('script');
+      customScript.src = '/custom/global.js';
+      customScript.defer = true;
+      document.head.appendChild(customScript);
+    </script>
     <!-- if veloera custom::custom_head -->
   </head>
   <body>

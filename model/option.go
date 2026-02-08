@@ -70,6 +70,8 @@ func InitOptionMap() {
 	common.OptionMap["RebatePercentage"] = strconv.FormatFloat(common.RebatePercentage, 'f', -1, 64)
 	common.OptionMap["DisplayInCurrencyEnabled"] = strconv.FormatBool(common.DisplayInCurrencyEnabled)
 	common.OptionMap["DisplayTokenStatEnabled"] = strconv.FormatBool(common.DisplayTokenStatEnabled)
+	common.OptionMap["HideHeaderLogoEnabled"] = strconv.FormatBool(common.HideHeaderLogoEnabled)
+	common.OptionMap["HideHeaderTextEnabled"] = strconv.FormatBool(common.HideHeaderTextEnabled)
 	common.OptionMap["DrawingEnabled"] = strconv.FormatBool(common.DrawingEnabled)
 	common.OptionMap["TaskEnabled"] = strconv.FormatBool(common.TaskEnabled)
 	common.OptionMap["DataExportEnabled"] = strconv.FormatBool(common.DataExportEnabled)
@@ -88,6 +90,7 @@ func InitOptionMap() {
 	common.OptionMap["HomePageContent"] = ""
 	common.OptionMap["Footer"] = common.Footer
 	common.OptionMap["SystemName"] = common.SystemName
+	common.OptionMap["SystemNameColor"] = common.SystemNameColor
 	common.OptionMap["Logo"] = common.Logo
 	common.OptionMap["ServerAddress"] = ""
 	common.OptionMap["WorkerUrl"] = setting.WorkerUrl
@@ -291,6 +294,10 @@ func updateOptionMap(key string, value string) (err error) {
 			common.DisplayInCurrencyEnabled = boolValue
 		case "DisplayTokenStatEnabled":
 			common.DisplayTokenStatEnabled = boolValue
+		case "HideHeaderLogoEnabled":
+			common.HideHeaderLogoEnabled = boolValue
+		case "HideHeaderTextEnabled":
+			common.HideHeaderTextEnabled = boolValue
 		case "DrawingEnabled":
 			common.DrawingEnabled = boolValue
 		case "TaskEnabled":
@@ -385,6 +392,8 @@ func updateOptionMap(key string, value string) (err error) {
 		common.Footer = value
 	case "SystemName":
 		common.SystemName = value
+	case "SystemNameColor":
+		common.SystemNameColor = value
 	case "Logo":
 		common.Logo = value
 	case "WeChatServerAddress":

@@ -2190,7 +2190,6 @@ const ChannelsTable = () => {
               label={t('搜索渠道关键词')}
               placeholder={t('搜索渠道的 ID，名称和密钥 ...')}
               value={searchKeyword}
-              loading={searching}
               onChange={(v) => {
                 setSearchKeyword(v.trim());
               }}
@@ -2200,7 +2199,6 @@ const ChannelsTable = () => {
               label={t('模型')}
               placeholder={t('模型关键字')}
               value={searchModel}
-              loading={searching}
               onChange={(v) => {
                 setSearchModel(v.trim());
               }}

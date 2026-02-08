@@ -20,7 +20,8 @@ body {
   margin: 0;
   padding-top: 0;
   font-family:
-    Lato, 'Helvetica Neue', Arial, Helvetica, 'Microsoft YaHei', sans-serif;
+    'Manrope', 'Plus Jakarta Sans', 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scrollbar-width: none;
@@ -29,11 +30,57 @@ body {
   height: 100vh;
 }
 
+:root {
+  --velo-shell-bg:
+    radial-gradient(1200px 500px at 100% -10%, rgba(36, 141, 255, 0.2), transparent 55%),
+    radial-gradient(900px 420px at -10% 100%, rgba(18, 196, 145, 0.14), transparent 52%),
+    linear-gradient(180deg, #f8fafc 0%, #eef3f9 100%);
+  --velo-glass-bg: rgba(255, 255, 255, 0.68);
+  --velo-panel-bg: rgba(255, 255, 255, 0.84);
+  --velo-glass-border: rgba(15, 23, 42, 0.09);
+  --velo-shadow-sm: 0 10px 24px rgba(15, 23, 42, 0.06);
+  --velo-shadow-md: 0 20px 40px rgba(15, 23, 42, 0.08);
+  --velo-shadow-lg: 0 22px 44px rgba(15, 23, 42, 0.16);
+}
+
+body[theme-mode='dark'] {
+  --velo-shell-bg:
+    radial-gradient(1200px 500px at 100% -10%, rgba(66, 132, 255, 0.2), transparent 55%),
+    radial-gradient(900px 420px at -10% 100%, rgba(18, 196, 145, 0.12), transparent 52%),
+    linear-gradient(180deg, #101319 0%, #161b22 100%);
+  --velo-glass-bg: rgba(26, 30, 39, 0.8);
+  --velo-panel-bg: rgba(26, 30, 39, 0.9);
+  --velo-glass-border: rgba(148, 163, 184, 0.24);
+  --velo-shadow-sm: 0 14px 30px rgba(2, 6, 23, 0.35);
+  --velo-shadow-md: 0 18px 36px rgba(2, 6, 23, 0.45);
+  --velo-shadow-lg: 0 26px 50px rgba(2, 6, 23, 0.6);
+}
+
 #root {
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+}
+
+#root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--velo-shell-bg);
+  z-index: -2;
+}
+
+#root::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(35% 35% at 12% 20%, rgba(255, 255, 255, 0.22), transparent 75%),
+    radial-gradient(28% 28% at 80% 86%, rgba(255, 255, 255, 0.16), transparent 75%);
+  z-index: -1;
+  pointer-events: none;
 }
 
 #root
@@ -293,8 +340,8 @@ code {
 }
 
 .topnav .semi-navigation-item:hover {
-  background-color: var(--semi-color-primary-light-default);
-  box-shadow: 0 2px 8px rgba(var(--semi-color-primary-rgb), 0.2);
+  background-color: var(--semi-color-fill-1);
+  box-shadow: var(--velo-shadow-sm);
 }
 
 .topnav .semi-navigation-item-selected {
@@ -391,8 +438,8 @@ code {
 .custom-sidebar-nav .semi-navigation-footer {
   position: sticky !important;
   bottom: 0 !important;
-  background: var(--semi-color-bg-1) !important;
-  border-top: 1px solid var(--semi-color-border) !important;
+  background: var(--velo-panel-bg) !important;
+  border-top: 0 !important;
   z-index: 10 !important;
   flex-shrink: 0 !important;
   margin-top: auto !important;
@@ -429,3 +476,85 @@ code {
 /*  -moz-box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08) !important;*/
 /*  min-height: 100%;*/
 /*}*/
+
+.page-shell-header {
+  background: transparent !important;
+}
+
+.page-shell-content {
+  padding-bottom: 16px !important;
+}
+
+.page-shell-content > :not(iframe) {
+  max-width: 1480px;
+  margin-inline: auto;
+}
+
+.page-shell-content .semi-card,
+.page-shell-content .semi-descriptions,
+.page-shell-content .semi-table-wrapper {
+  border: 1px solid var(--velo-glass-border);
+  border-radius: 14px;
+  box-shadow: var(--velo-shadow-sm);
+  backdrop-filter: blur(2px);
+}
+
+.page-shell-backdrop {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(15, 23, 42, 0.36);
+  backdrop-filter: blur(1px);
+  z-index: 110;
+}
+
+.app-footer-shell {
+  margin: 6px 12px 0;
+  padding: 8px 4px 26px;
+}
+
+.app-footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 6px 0;
+}
+
+.app-footer-content-empty {
+  justify-content: flex-end;
+}
+
+.footer-powered-link {
+  text-decoration: none;
+  color: inherit;
+  font-size: 13px;
+}
+
+.app-footer-custom {
+  font-size: 14px;
+}
+
+@media only screen and (max-width: 767px) {
+  .page-shell-content > :not(iframe) {
+    max-width: 100%;
+  }
+
+  .app-footer-content {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  .app-footer-content-empty {
+    align-items: flex-end;
+  }
+}

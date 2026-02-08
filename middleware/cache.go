@@ -18,11 +18,28 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
+	"strings"
 )
 
 func Cache() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		if c.Request.RequestURI == "/" {
+		uri := c.Request.RequestURI
+
+		// Never cache API responses (otherwise user余额/额度等会“卡住”不更新).
+		if strings.HasPrefix(uri, "/api") || strings.HasPrefix(uri, "/v1") || strings.HasPrefix(uri, "/pg") {
+			c.Header("Cache-Control", "no-store")
+			c.Next()
+			return
+		}
+
+		// Custom assets are user-editable; keep them always fresh.
+		if strings.HasPrefix(uri, "/custom/") {
+			c.Header("Cache-Control", "no-cache")
+			c.Next()
+			return
+		}
+
+		if uri == "/" {
 			c.Header("Cache-Control", "no-cache")
 		} else {
 			c.Header("Cache-Control", "max-age=604800") // one week

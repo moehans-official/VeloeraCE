@@ -19,6 +19,15 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 export function setStatusData(data) {
   localStorage.setItem('status', JSON.stringify(data));
   localStorage.setItem('system_name', data.system_name);
+  localStorage.setItem('system_name_color', data.system_name_color || '');
+  localStorage.setItem(
+    'hide_header_logo_enabled',
+    data.hide_header_logo_enabled ? 'true' : 'false',
+  );
+  localStorage.setItem(
+    'hide_header_text_enabled',
+    data.hide_header_text_enabled ? 'true' : 'false',
+  );
   localStorage.setItem('logo', data.logo);
   localStorage.setItem('footer_html', data.footer_html);
   localStorage.setItem('quota_per_unit', data.quota_per_unit);

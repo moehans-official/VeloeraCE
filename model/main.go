@@ -267,6 +267,8 @@ func migrateDB() error {
 		&Log{},
 		&Midjourney{},
 		&TopUp{},
+		&SubscriptionPlan{},
+		&UserPlanOrder{},
 		&QuotaData{},
 		&Task{},
 		&Setup{},
@@ -295,13 +297,13 @@ func migrateLOGDB() error {
 	if err = LOG_DB.AutoMigrate(&Log{}); err != nil {
 		return err
 	}
-	
+
 	// Manual migration for client_ip column and index
 	sqlDB, err := LOG_DB.DB()
 	if err != nil {
 		return err
 	}
-	
+
 	// Add client_ip column if it doesn't exist (for existing databases)
 	if common.UsingMySQL {
 		_, _ = sqlDB.Exec("ALTER TABLE logs ADD COLUMN IF NOT EXISTS client_ip VARCHAR(45) DEFAULT NULL;")
@@ -311,7 +313,7 @@ func migrateLOGDB() error {
 		_, _ = sqlDB.Exec("CREATE INDEX IF NOT EXISTS idx_logs_client_ip ON logs(client_ip);")
 	}
 	// SQLite will handle this automatically through GORM AutoMigrate
-	
+
 	return nil
 }
 

@@ -16,7 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
@@ -25,33 +25,61 @@ import 'semantic-ui-offline/semantic.min.css';
 import './index.css';
 import './styles/global.scss';
 import { UserProvider } from './context/User';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import { StatusProvider } from './context/Status';
-import { Layout } from '@douyinfe/semi-ui';
+import { Layout, LocaleProvider } from '@douyinfe/semi-ui';
+import zhCN from '@douyinfe/semi-ui/lib/es/locale/source/zh_CN';
+import enUS from '@douyinfe/semi-ui/lib/es/locale/source/en_US';
 import SiderBar from './components/SiderBar';
 import { ThemeProvider } from './context/Theme';
 import FooterBar from './components/Footer';
 import { StyleProvider } from './context/Style/index.js';
 import PageLayout from './components/PageLayout.js';
-import './i18n/i18n.js';
+import i18n from './i18n/i18n.js';
+import { suppressReactLegacyWarningsInDev } from './helpers/suppressReactLegacyWarnings.js';
 
 // initialization
 
+suppressReactLegacyWarningsInDev();
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 const { Sider, Content, Header, Footer } = Layout;
-root.render(
-  <React.StrictMode>
-    <StatusProvider>
-      <UserProvider>
-        <BrowserRouter>
+
+const resolveSemiLocale = (lang) => {
+  const language = (lang || 'zh').toLowerCase();
+  return language.startsWith('zh') ? zhCN : enUS;
+};
+
+const SemiLocaleBridge = ({ children }) => {
+  const [lang, setLang] = useState(i18n.resolvedLanguage || i18n.language || 'zh');
+  const semiLocale = useMemo(() => resolveSemiLocale(lang), [lang]);
+
+  useEffect(() => {
+    const onLanguageChanged = (nextLang) => {
+      setLang(nextLang || 'zh');
+    };
+    i18n.on('languageChanged', onLanguageChanged);
+    return () => i18n.off('languageChanged', onLanguageChanged);
+  }, []);
+
+  return <LocaleProvider locale={semiLocale}>{children}</LocaleProvider>;
+};
+
+const app = (
+  <StatusProvider>
+    <UserProvider>
+      <BrowserRouter
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
+        <SemiLocaleBridge>
           <ThemeProvider>
             <StyleProvider>
               <PageLayout />
             </StyleProvider>
           </ThemeProvider>
-        </BrowserRouter>
-      </UserProvider>
-    </StatusProvider>
-  </React.StrictMode>,
+        </SemiLocaleBridge>
+      </BrowserRouter>
+    </UserProvider>
+  </StatusProvider>
 );
+
+root.render(app);

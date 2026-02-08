@@ -16,229 +16,494 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
-import React, { useContext, useEffect, useState } from 'react';
-import { Banner, Card, Col, Row } from '@douyinfe/semi-ui';
-import { API, showError, showNotice, timestamp2string } from '../../helpers';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Banner, Button, Spin } from '@douyinfe/semi-ui';
+import {
+  IconCopy,
+  IconHelpCircle,
+  IconKey,
+  IconRefresh,
+} from '@douyinfe/semi-icons';
+import {
+  API,
+  showError,
+  showNotice,
+  showSuccess,
+  timestamp2string,
+} from '../../helpers';
 import { StatusContext } from '../../context/Status';
 import { marked } from 'marked';
-import { StyleContext } from '../../context/Style/index.js';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import './home.css';
+
+const ENDPOINT_ROTATE_INTERVAL = 2800;
+const endpointPaths = [
+  '/v1/chat/completions',
+  '/v1/completions',
+  '/v1/edits',
+  '/v1/embeddings',
+  '/v1/engines/{model}/embeddings',
+  '/v1/moderations',
+  '/v1/images/generations',
+  '/v1/audio/transcriptions',
+  '/v1/audio/translations',
+  '/v1/audio/speech',
+  '/v1/responses',
+  '/v1/realtime',
+  '/v1/rerank',
+  '/v1/messages',
+  '/v1/messages/count_tokens',
+  '/v1/models',
+];
+
+const isUrlContent = (content) => /^https?:\/\//i.test(content.trim());
+
+const isHtmlDocument = (content) => {
+  const normalized = content.trim().toLowerCase();
+  return normalized.startsWith('<!doctype') || normalized.startsWith('<html');
+};
 
 const Home = () => {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const [statusState] = useContext(StatusContext);
   const [homePageContentLoaded, setHomePageContentLoaded] = useState(false);
   const [homePageContent, setHomePageContent] = useState('');
-  const [styleState, styleDispatch] = useContext(StyleContext);
+  const [endpointIndex, setEndpointIndex] = useState(0);
+  const [loadingContent, setLoadingContent] = useState(false);
+  const initializedRef = useRef(false);
+  const navigate = useNavigate();
+
+  const isZh = (i18n.resolvedLanguage || i18n.language || 'zh')
+    .toLowerCase()
+    .startsWith('zh');
+
+  const text = useMemo(
+    () =>
+      isZh
+        ? {
+            warning: '本站管理员可查看你的对话内容，请避免提交敏感信息。',
+            eyebrow: 'Enterprise AI Gateway',
+            title: '统一的模型网关控制台',
+            subtitle:
+              '一个入口管理模型调用、账号体系与支付能力，兼顾稳定性、可观测性和多渠道扩展。',
+            getKey: '管理密钥',
+            docs: '查看文档',
+            copySuccess: '接口地址已复制',
+            copyFail: '复制失败，请手动复制',
+            loading: '正在加载首页内容...',
+            refresh: '刷新',
+            unknown: '未知',
+            online: '在线',
+            sectionRuntime: '运行状态',
+            sectionAuth: '认证能力',
+            sectionFeature: '平台能力',
+            version: '版本',
+            startTime: '启动时间',
+            serverAddress: '服务地址',
+            systemName: '系统名称',
+            oauthCount: 'OAuth 启用',
+            featureCount: '功能启用',
+            authProviders: '认证提供方',
+            setup: '初始化状态',
+            enabled: '启用',
+            disabled: '关闭',
+            setupDone: '已完成',
+            setupPending: '未完成',
+            emailVerification: '邮箱验证',
+            turnstile: 'Turnstile 验证',
+            register: '新用户注册',
+            github: 'GitHub 登录',
+            oidc: 'OIDC 登录',
+            wechat: '微信登录',
+            telegram: 'Telegram 登录',
+            linuxdo: 'Linux DO 登录',
+            idcflare: 'IDC Flare 登录',
+            drawing: '图像能力',
+            task: '任务能力',
+            dataExport: '数据导出',
+            topup: '在线充值',
+            quickActions: '快捷操作',
+            openPricing: '套餐中心',
+            openDashboard: '数据看板',
+            openSetting: '系统设置',
+          }
+        : {
+            warning:
+              'Site administrators can review chat logs. Please avoid sharing sensitive content.',
+            eyebrow: 'Enterprise AI Gateway',
+            title: 'Unified Model Gateway Console',
+            subtitle:
+              'Manage model traffic, identity and billing from one control plane with strong reliability and observability.',
+            getKey: 'Manage Keys',
+            docs: 'Open Docs',
+            copySuccess: 'API endpoint copied',
+            copyFail: 'Copy failed, please copy manually',
+            loading: 'Loading homepage content...',
+            refresh: 'Refresh',
+            unknown: 'Unknown',
+            online: 'Online',
+            sectionRuntime: 'Runtime',
+            sectionAuth: 'Authentication',
+            sectionFeature: 'Platform Features',
+            version: 'Version',
+            startTime: 'Started At',
+            serverAddress: 'Server Address',
+            systemName: 'System Name',
+            oauthCount: 'OAuth Enabled',
+            featureCount: 'Features Enabled',
+            authProviders: 'Auth Providers',
+            setup: 'Setup State',
+            enabled: 'Enabled',
+            disabled: 'Disabled',
+            setupDone: 'Completed',
+            setupPending: 'Pending',
+            emailVerification: 'Email Verification',
+            turnstile: 'Turnstile Check',
+            register: 'User Registration',
+            github: 'GitHub Login',
+            oidc: 'OIDC Login',
+            wechat: 'WeChat Login',
+            telegram: 'Telegram Login',
+            linuxdo: 'Linux DO Login',
+            idcflare: 'IDC Flare Login',
+            drawing: 'Drawing',
+            task: 'Task',
+            dataExport: 'Data Export',
+            topup: 'Online Top-up',
+            quickActions: 'Quick Actions',
+            openPricing: 'Package Center',
+            openDashboard: 'Dashboard',
+            openSetting: 'System Settings',
+          },
+    [isZh],
+  );
+
+  const status = useMemo(() => {
+    if (statusState?.status) {
+      return statusState.status;
+    }
+    try {
+      return JSON.parse(localStorage.getItem('status') || '{}');
+    } catch (_) {
+      return {};
+    }
+  }, [statusState?.status]);
+
+  const oauthEnabledCount = [
+    status.github_oauth,
+    status.oidc_enabled,
+    status.wechat_login,
+    status.telegram_oauth,
+    status.linuxdo_oauth,
+    status.idcflare_oauth,
+  ].filter(Boolean).length;
+
+  const featureEnabledCount = [
+    status.enable_drawing,
+    status.enable_task,
+    status.enable_data_export,
+    status.enable_online_topup,
+  ].filter(Boolean).length;
 
   const displayNotice = async () => {
-    const res = await API.get('/api/notice');
-    const { success, message, data } = res.data;
-    if (success) {
-      let oldNotice = localStorage.getItem('notice');
-      if (data !== oldNotice && data !== '') {
-        const htmlNotice = marked(data);
-        showNotice(htmlNotice, true);
-        localStorage.setItem('notice', data);
+    try {
+      const res = await API.get('/api/notice');
+      const { success, message, data } = res?.data || {};
+      if (success) {
+        const oldNotice = localStorage.getItem('notice');
+        if (typeof data === 'string' && data !== oldNotice && data !== '') {
+          showNotice(marked.parse(data), true);
+          localStorage.setItem('notice', data);
+        }
+      } else {
+        showError(message || 'Failed to load notice');
       }
-    } else {
-      showError(message);
+    } catch (error) {
+      showError(error?.response?.data?.message || 'Failed to load notice');
     }
   };
 
   const displayHomePageContent = async () => {
-    setHomePageContent(localStorage.getItem('home_page_content') || '');
-    const res = await API.get('/api/home_page_content');
-    const { success, message, data } = res.data;
-    if (success) {
-      let content = data;
-      if (!data.startsWith('https://') && !data.startsWith('<!DOCTYPE')) {
-        content = marked.parse(data);
+    setLoadingContent(true);
+    try {
+      setHomePageContent(localStorage.getItem('home_page_content') || '');
+      const res = await API.get('/api/home_page_content');
+      const { success, message, data } = res?.data || {};
+      if (success && typeof data === 'string') {
+        const content =
+          isUrlContent(data) || isHtmlDocument(data)
+            ? data
+            : marked.parse(data);
+        setHomePageContent(content);
+        localStorage.setItem('home_page_content', content);
+      } else {
+        showError(message || 'Failed to load home page content');
+        setHomePageContent('');
       }
-      setHomePageContent(content);
-      localStorage.setItem('home_page_content', content);
-
-      // 如果内容是 URL，则发送主题模式
-      if (data.startsWith('https://')) {
-        const iframe = document.querySelector('iframe');
-        if (iframe) {
-          const theme = localStorage.getItem('theme-mode') || 'light';
-          // 测试是否正确传递theme-mode给iframe
-          // console.log('Sending theme-mode to iframe:', theme);
-          iframe.onload = () => {
-            iframe.contentWindow.postMessage({ themeMode: theme }, '*');
-            iframe.contentWindow.postMessage({ lang: i18n.language }, '*');
-          };
-        }
-      }
-    } else {
-      showError(message);
-      setHomePageContent('加载首页内容失败...');
+    } catch (error) {
+      showError(
+        error?.response?.data?.message || 'Failed to load home page content',
+      );
+      setHomePageContent('');
+    } finally {
+      setHomePageContentLoaded(true);
+      setLoadingContent(false);
     }
-    setHomePageContentLoaded(true);
-  };
-
-  const getStartTimeString = () => {
-    const timestamp = statusState?.status?.start_time;
-    return statusState.status ? timestamp2string(timestamp) : '';
   };
 
   useEffect(() => {
-    displayNotice().then();
-    displayHomePageContent().then();
+    if (initializedRef.current) {
+      return;
+    }
+    initializedRef.current = true;
+    displayNotice();
+    displayHomePageContent();
   }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setEndpointIndex((current) => (current + 1) % endpointPaths.length);
+    }, ENDPOINT_ROTATE_INTERVAL);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isUrlContent(homePageContent)) {
+      return;
+    }
+    const iframe = document.querySelector('iframe.home-custom-frame');
+    if (!iframe) {
+      return;
+    }
+    const theme = localStorage.getItem('theme-mode') || 'light';
+    iframe.onload = () => {
+      iframe.contentWindow.postMessage({ themeMode: theme }, '*');
+      iframe.contentWindow.postMessage({ lang: i18n.language }, '*');
+    };
+  }, [homePageContent, i18n.language]);
+
+  const serverAddress = status.server_address || window.location.origin;
+  const normalizedServerAddress = String(serverAddress).replace(/\/+$/, '');
+  const endpointPath = endpointPaths[endpointIndex];
+  const endpointUrl = `${normalizedServerAddress}${endpointPath}`;
+  const docsLink = status.docs_link || localStorage.getItem('docs_link') || '';
+  const systemName =
+    status.system_name || localStorage.getItem('system_name') || 'VeloeraCE';
+  const version = status.version || text.unknown;
+  const startTimeText = status.start_time
+    ? timestamp2string(status.start_time)
+    : text.unknown;
+  const setupText = status.setup ? text.setupDone : text.setupPending;
+
+  const handleCopyEndpoint = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(endpointUrl);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = endpointUrl;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      showSuccess(text.copySuccess);
+    } catch (error) {
+      showError(text.copyFail);
+    }
+  };
+
+  const renderStatusItem = (label, enabled) => (
+    <div className='home-status-item' key={label}>
+      <span className='home-status-item__label'>{label}</span>
+      <span
+        className={`home-status-item__value ${
+          enabled ? 'is-enabled' : 'is-disabled'
+        }`}
+      >
+        {enabled ? text.enabled : text.disabled}
+      </span>
+    </div>
+  );
+
+  const defaultHome = (
+    <section className='home-console'>
+      <div className='home-console-hero'>
+        <div className='home-console-hero__main'>
+          <div className='home-console-eyebrow'>{text.eyebrow}</div>
+          <h1 className='home-console-title'>{text.title}</h1>
+          <p className='home-console-subtitle'>{text.subtitle}</p>
+
+          <div className='home-endpoint-card' title={endpointUrl}>
+            <span className='home-endpoint-card__host'>
+              {normalizedServerAddress}
+            </span>
+            <span
+              key={endpointPath}
+              className='home-endpoint-card__path home-endpoint-card__path--animated'
+            >
+              {endpointPath}
+            </span>
+            <Button
+              icon={<IconCopy />}
+              theme='borderless'
+              type='tertiary'
+              onClick={handleCopyEndpoint}
+            />
+          </div>
+
+          <div className='home-console-actions'>
+            <Button
+              type='primary'
+              theme='solid'
+              icon={<IconKey />}
+              onClick={() => navigate('/app/tokens')}
+            >
+              {text.getKey}
+            </Button>
+            <Button
+              type='tertiary'
+              theme='light'
+              icon={<IconHelpCircle />}
+              onClick={() => {
+                if (docsLink) {
+                  window.open(docsLink, '_blank', 'noopener,noreferrer');
+                } else {
+                  navigate('/about');
+                }
+              }}
+            >
+              {text.docs}
+            </Button>
+            <Button
+              theme='borderless'
+              type='tertiary'
+              icon={<IconRefresh />}
+              loading={loadingContent}
+              onClick={displayHomePageContent}
+            >
+              {text.refresh}
+            </Button>
+          </div>
+        </div>
+
+        <div className='home-console-hero__side'>
+          <div className='home-health-card'>
+            <div className='home-health-card__title'>{text.sectionRuntime}</div>
+            <div className='home-health-card__line'>
+              <span>{text.systemName}</span>
+              <strong>{systemName}</strong>
+            </div>
+            <div className='home-health-card__line'>
+              <span>{text.version}</span>
+              <strong>{version}</strong>
+            </div>
+            <div className='home-health-card__line'>
+              <span>{text.startTime}</span>
+              <strong>{startTimeText}</strong>
+            </div>
+            <div className='home-health-card__line'>
+              <span>{text.setup}</span>
+              <strong>{setupText}</strong>
+            </div>
+            <div className='home-health-card__badge'>{text.online}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className='home-console-metrics'>
+        <div className='home-metric-card'>
+          <div className='home-metric-card__label'>{text.serverAddress}</div>
+          <div className='home-metric-card__value'>
+            {normalizedServerAddress}
+          </div>
+        </div>
+        <div className='home-metric-card'>
+          <div className='home-metric-card__label'>{text.oauthCount}</div>
+          <div className='home-metric-card__value'>{oauthEnabledCount}/6</div>
+        </div>
+        <div className='home-metric-card'>
+          <div className='home-metric-card__label'>{text.featureCount}</div>
+          <div className='home-metric-card__value'>{featureEnabledCount}/4</div>
+        </div>
+        <div className='home-metric-card'>
+          <div className='home-metric-card__label'>{text.authProviders}</div>
+          <div className='home-metric-card__value'>{oauthEnabledCount}</div>
+        </div>
+      </div>
+
+      <div className='home-console-grid'>
+        <div className='home-section-card'>
+          <h3 className='home-section-card__title'>{text.sectionAuth}</h3>
+          {renderStatusItem(text.emailVerification, status.email_verification)}
+          {renderStatusItem(text.turnstile, status.turnstile_check)}
+          {renderStatusItem(text.register, status.register_enabled)}
+        </div>
+        <div className='home-section-card'>
+          <h3 className='home-section-card__title'>{text.authProviders}</h3>
+          {renderStatusItem(text.github, status.github_oauth)}
+          {renderStatusItem(text.oidc, status.oidc_enabled)}
+          {renderStatusItem(text.wechat, status.wechat_login)}
+          {renderStatusItem(text.telegram, status.telegram_oauth)}
+          {renderStatusItem(text.linuxdo, status.linuxdo_oauth)}
+          {renderStatusItem(text.idcflare, status.idcflare_oauth)}
+        </div>
+        <div className='home-section-card'>
+          <h3 className='home-section-card__title'>{text.sectionFeature}</h3>
+          {renderStatusItem(text.drawing, status.enable_drawing)}
+          {renderStatusItem(text.task, status.enable_task)}
+          {renderStatusItem(text.dataExport, status.enable_data_export)}
+          {renderStatusItem(text.topup, status.enable_online_topup)}
+          <div className='home-quick-actions'>
+            <div className='home-quick-actions__label'>{text.quickActions}</div>
+            <div className='home-quick-actions__buttons'>
+              <Button size='small' onClick={() => navigate('/app/pricing')}>
+                {text.openPricing}
+              </Button>
+              <Button size='small' onClick={() => navigate('/app/dashboard')}>
+                {text.openDashboard}
+              </Button>
+              <Button size='small' onClick={() => navigate('/admin/settings')}>
+                {text.openSetting}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 
   return (
     <>
-      {/* Warning banner for chat content logging */}
-      {statusState?.status?.log_chat_content_enabled && (
+      {status.log_chat_content_enabled && (
         <Banner
-          type="warning"
-          description="此站点管理员可查看您的对话内容"
-          style={{
-            margin: '0 0 16px 0',
-            borderRadius: '6px',
-          }}
+          type='warning'
+          description={text.warning}
+          style={{ margin: '0 0 16px 0', borderRadius: '8px' }}
         />
       )}
-      {homePageContentLoaded && homePageContent === '' ? (
-        <>
-          <Card
-            bordered={false}
-            headerLine={false}
-            title={t('系统状况')}
-            bodyStyle={{ padding: '10px 20px' }}
-          >
-            <Row gutter={16}>
-              <Col span={12}>
-                <Card
-                  title={t('系统信息')}
-                  headerExtraContent={
-                    <span
-                      style={{
-                        fontSize: '12px',
-                        color: 'var(--semi-color-text-1)',
-                      }}
-                    >
-                      {t('系统信息总览')}
-                    </span>
-                  }
-                >
-                  <p>
-                    {t('名称')}：{statusState?.status?.system_name}
-                  </p>
-                  <p>
-                    {t('版本')}：
-                    {statusState?.status?.version
-                      ? statusState?.status?.version
-                      : 'unknown'}
-                  </p>
-                  <p>
-                    {t('源码')}：
-                    <a
-                      href='https://github.com/moehans-official/VeloeraCE'
-                      target='_blank'
-                      rel='noreferrer'
-                    >
-                      https://github.com/moehans-official/VeloeraCE
-                    </a>
-                  </p>
-                  
-                  <p>
-                    {t('协议')}：
-                    <a
-                      href='https://www.gnu.org/licenses/gpl-3.0.html'
-                      target='_blank'
-                      rel='noreferrer'
-                    >
-                      GNU GPL v3-or-later
-                    </a>
-                  </p>
-                  <p>
-                    {t('启动时间')}：{getStartTimeString()}
-                  </p>
-                </Card>
-              </Col>
-              <Col span={12}>
-                <Card
-                  title={t('系统配置')}
-                  headerExtraContent={
-                    <span
-                      style={{
-                        fontSize: '12px',
-                        color: 'var(--semi-color-text-1)',
-                      }}
-                    >
-                      {t('系统配置总览')}
-                    </span>
-                  }
-                >
-                  <p>
-                    {t('邮箱验证')}：
-                    {statusState?.status?.email_verification === true
-                      ? t('已启用')
-                      : t('未启用')}
-                  </p>
-                  <p>
-                    {t('GitHub 身份验证')}：
-                    {statusState?.status?.github_oauth === true
-                      ? t('已启用')
-                      : t('未启用')}
-                  </p>
-                  <p>
-                    {t('OIDC 身份验证')}：
-                    {statusState?.status?.oidc === true
-                      ? t('已启用')
-                      : t('未启用')}
-                  </p>
-                  <p>
-                    {t('微信身份验证')}：
-                    {statusState?.status?.wechat_login === true
-                      ? t('已启用')
-                      : t('未启用')}
-                  </p>
-                  <p>
-                    {t('Turnstile 用户校验')}：
-                    {statusState?.status?.turnstile_check === true
-                      ? t('已启用')
-                      : t('未启用')}
-                  </p>
-                  <p>
-                    {t('Telegram 身份验证')}：
-                    {statusState?.status?.telegram_oauth === true
-                      ? t('已启用')
-                      : t('未启用')}
-                  </p>
-                  <p>
-                    {t('Linux DO 身份验证')}：
-                    {statusState?.status?.linuxdo_oauth === true
-                      ? t('已启用')
-                      : t('未启用')}
-                  </p>
-                </Card>
-              </Col>
-            </Row>
-          </Card>
-        </>
+      {!homePageContentLoaded ? (
+        <section className='home-loading-wrap'>
+          <Spin spinning={true}>
+            <div className='home-loading-text'>{text.loading}</div>
+          </Spin>
+        </section>
+      ) : homePageContent === '' ? (
+        defaultHome
+      ) : isUrlContent(homePageContent) ? (
+        <iframe className='home-custom-frame' src={homePageContent} />
+      ) : isHtmlDocument(homePageContent) ? (
+        <iframe className='home-custom-frame' srcDoc={homePageContent} />
       ) : (
-        <>
-          {homePageContent.startsWith('https://') ? (
-            <iframe
-              src={homePageContent}
-              style={{ width: '100%', height: '100vh', border: 'none' }}
-            />
-          ) : homePageContent.trim().startsWith('<!DOCTYPE') ? (
-            <iframe
-              srcDoc={homePageContent}
-              style={{ width: '100%', height: '100vh', border: 'none' }}
-            />
-          ) : (
-            <div
-              style={{ fontSize: 'larger' }}
-              dangerouslySetInnerHTML={{ __html: homePageContent }}
-            ></div>
-          )}
-        </>
+        <div
+          className='home-custom-html'
+          dangerouslySetInnerHTML={{ __html: homePageContent }}
+        />
       )}
     </>
   );

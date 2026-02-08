@@ -1,4 +1,4 @@
-﻿/*
+/*
 Copyright (c) 2025 Tethys Plex
 
 This file is part of Veloera.
@@ -51,7 +51,7 @@ const FooterBar = () => {
       remainCheckTimes--;
       loadFooter();
     }, 200);
-    return () => clearTimeout(timer);
+    return () => clearInterval(timer);
   }, []);
 
   const PoweredByLink = (
@@ -59,11 +59,7 @@ const FooterBar = () => {
       href='https://github.com/moehans-official/VeloeraCE'
       target='_blank'
       rel='noreferrer'
-      style={{
-        textDecoration: 'none',
-        color: 'inherit',
-        fontSize: '14px',
-      }}
+      className='footer-powered-link'
       onMouseEnter={(e) => (e.target.style.textDecoration = 'underline')}
       onMouseLeave={(e) => (e.target.style.textDecoration = 'none')}
     >
@@ -74,29 +70,19 @@ const FooterBar = () => {
   let content;
   if (footer) {
     content = (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '20px',
-          maxWidth: '1200px',
-          margin: '0 auto',
-          padding: '0 20px',
-        }}
-      >
+      <div className='app-footer-content'>
         <div
-          className='custom-footer'
+          className='custom-footer app-footer-custom'
           dangerouslySetInnerHTML={{ __html: footer }}
         ></div>
-        <div>{PoweredByLink}</div>
+        <div className='app-footer-powered'>{PoweredByLink}</div>
       </div>
     );
   } else {
-    content = <div style={{ textAlign: 'right', padding: '0 20px' }}>{PoweredByLink}</div>;
+    content = <div className='app-footer-content app-footer-content-empty'>{PoweredByLink}</div>;
   }
 
-  return <div style={{ paddingBottom: '28px', marginLeft: '10px', marginRight: '10px' }}>{content}</div>;
+  return <div className='app-footer-shell'>{content}</div>;
 };
 
 export default FooterBar;

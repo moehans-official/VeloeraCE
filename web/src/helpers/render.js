@@ -231,14 +231,18 @@ export const renderGroupOption = (item) => {
 };
 
 export function renderNumber(num) {
-  if (num >= 1000000000) {
-    return (num / 1000000000).toFixed(1) + 'B';
-  } else if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M';
-  } else if (num >= 10000) {
-    return (num / 1000).toFixed(1) + 'k';
+  const value = Number(num);
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  if (value >= 1000000000) {
+    return (value / 1000000000).toFixed(1) + 'B';
+  } else if (value >= 1000000) {
+    return (value / 1000000).toFixed(1) + 'M';
+  } else if (value >= 10000) {
+    return (value / 1000).toFixed(1) + 'k';
   } else {
-    return num;
+    return value;
   }
 }
 
@@ -286,20 +290,25 @@ export function renderNumberWithPoint(num) {
 export function getQuotaPerUnit() {
   let quotaPerUnit = localStorage.getItem('quota_per_unit');
   quotaPerUnit = parseFloat(quotaPerUnit);
+  if (!Number.isFinite(quotaPerUnit) || quotaPerUnit <= 0) {
+    return 500000;
+  }
   return quotaPerUnit;
 }
 
 export function renderUnitWithQuota(quota) {
-  let quotaPerUnit = localStorage.getItem('quota_per_unit');
-  quotaPerUnit = parseFloat(quotaPerUnit);
-  quota = parseFloat(quota);
-  return quotaPerUnit * quota;
+  const quotaPerUnit = getQuotaPerUnit();
+  const quotaValue = Number(quota);
+  return quotaPerUnit * (Number.isFinite(quotaValue) ? quotaValue : 0);
 }
 
 export function getQuotaWithUnit(quota, digits = 6) {
-  let quotaPerUnit = localStorage.getItem('quota_per_unit');
-  quotaPerUnit = parseFloat(quotaPerUnit);
-  return (quota / quotaPerUnit).toFixed(digits);
+  const quotaPerUnit = getQuotaPerUnit();
+  const quotaValue = Number(quota);
+  if (!Number.isFinite(quotaValue)) {
+    return (0).toFixed(digits);
+  }
+  return (quotaValue / quotaPerUnit).toFixed(digits);
 }
 
 export function renderQuotaWithAmount(amount) {
@@ -313,14 +322,17 @@ export function renderQuotaWithAmount(amount) {
 }
 
 export function renderQuota(quota, digits = 2) {
-  let quotaPerUnit = localStorage.getItem('quota_per_unit');
+  let quotaPerUnit = getQuotaPerUnit();
   let displayInCurrency = localStorage.getItem('display_in_currency');
-  quotaPerUnit = parseFloat(quotaPerUnit);
+  const quotaValue = Number(quota);
   displayInCurrency = displayInCurrency === 'true';
   if (displayInCurrency) {
-    return '$' + (quota / quotaPerUnit).toFixed(digits);
+    if (!Number.isFinite(quotaValue)) {
+      return '$' + (0).toFixed(digits);
+    }
+    return '$' + (quotaValue / quotaPerUnit).toFixed(digits);
   }
-  return renderNumber(quota);
+  return renderNumber(Number.isFinite(quotaValue) ? quotaValue : 0);
 }
 
 export function renderModelPrice(
@@ -745,9 +757,16 @@ export function modelToColor(modelName) {
 }
 
 export function stringToColor(str) {
+  if (str === undefined || str === null) {
+    return colors[0];
+  }
+  const normalized = String(str).trim();
+  if (normalized.length === 0) {
+    return colors[0];
+  }
   let sum = 0;
-  for (let i = 0; i < str.length; i++) {
-    sum += str.charCodeAt(i);
+  for (let i = 0; i < normalized.length; i++) {
+    sum += normalized.charCodeAt(i);
   }
   let i = sum % colors.length;
   return colors[i];

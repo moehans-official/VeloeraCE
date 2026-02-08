@@ -22,7 +22,16 @@ import { UserContext } from '../context/User';
 import { useSetTheme, useTheme } from '../context/Theme';
 import { useTranslation } from 'react-i18next';
 
-import { API, getLogo, getSystemName, isMobile, showSuccess } from '../helpers';
+import {
+  API,
+  getHideHeaderLogoEnabled,
+  getHideHeaderTextEnabled,
+  getLogo,
+  getSystemName,
+  getSystemNameColor,
+  isMobile,
+  showSuccess,
+} from '../helpers';
 import '../index.css';
 
 import fireworks from 'react-fireworks';
@@ -91,14 +100,17 @@ const logoStyle = {
 };
 
 // 自定义顶部栏系统名称样式
-const systemNameStyle = {
+const systemNameBaseStyle = {
   fontWeight: 'bold',
   fontSize: '18px',
+  padding: '0 5px',
+};
+
+const defaultSystemNameGradientStyle = {
   background:
     'linear-gradient(45deg, var(--semi-color-primary), var(--semi-color-link-hover))',
   WebkitBackgroundClip: 'text',
   WebkitTextFillColor: 'transparent',
-  padding: '0 5px',
 };
 
 // 自定义顶部栏按钮图标样式
@@ -134,8 +146,25 @@ const HeaderBar = () => {
   const [statusState, statusDispatch] = useContext(StatusContext);
   let navigate = useNavigate();
   const [currentLang, setCurrentLang] = useState(i18n.language);
+  const [, setBrandingVersion] = useState(0);
 
   const systemName = getSystemName();
+  const systemNameColor = getSystemNameColor();
+  const hideHeaderLogoEnabled = getHideHeaderLogoEnabled();
+  const hideHeaderTextEnabled = getHideHeaderTextEnabled();
+  const normalizedSystemNameColor = (systemNameColor || '').trim();
+  const hasCustomSystemNameColor = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(
+    normalizedSystemNameColor,
+  );
+  const currentSystemNameStyle = hasCustomSystemNameColor
+    ? {
+        ...systemNameBaseStyle,
+        color: normalizedSystemNameColor,
+      }
+    : {
+        ...systemNameBaseStyle,
+        ...defaultSystemNameGradientStyle,
+      };
   const logo = getLogo();
   const currentDate = new Date();
   // enable fireworks on new year(1.1 and 2.9-2.24)
@@ -223,6 +252,19 @@ const HeaderBar = () => {
       console.log('Happy New Year!');
     }
   }, [theme]);
+
+  useEffect(() => {
+    const handleBrandingUpdated = () => {
+      setBrandingVersion((version) => version + 1);
+    };
+    window.addEventListener('brandingUpdated', handleBrandingUpdated);
+    window.addEventListener('statusUpdated', handleBrandingUpdated);
+
+    return () => {
+      window.removeEventListener('brandingUpdated', handleBrandingUpdated);
+      window.removeEventListener('statusUpdated', handleBrandingUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     const handleLanguageChanged = (lng) => {
@@ -367,9 +409,9 @@ const HeaderBar = () => {
                     ),
                   }
                 : {
-                    logo: (
-                      <Link 
-                        to="/" 
+                    logo: hideHeaderLogoEnabled ? null : (
+                      <Link
+                        to='/'
                         style={{ textDecoration: 'none' }}
                         onClick={() => {
                           styleDispatch({
@@ -380,13 +422,17 @@ const HeaderBar = () => {
                         }}
                       >
                         <div style={{ ...logoStyle, cursor: 'pointer' }}>
-                          <img src={logo} alt='logo' style={{ height: '28px' }} />
+                          <img
+                            src={logo}
+                            alt='logo'
+                            style={{ height: '28px' }}
+                          />
                         </div>
                       </Link>
                     ),
-                    text: (
-                      <Link 
-                        to="/" 
+                    text: hideHeaderTextEnabled ? null : (
+                      <Link
+                        to='/'
                         style={{ textDecoration: 'none' }}
                         onClick={() => {
                           styleDispatch({
@@ -403,7 +449,9 @@ const HeaderBar = () => {
                             cursor: 'pointer',
                           }}
                         >
-                          <span style={systemNameStyle}>{systemName}</span>
+                          <span style={currentSystemNameStyle}>
+                            {systemName}
+                          </span>
                           {(isSelfUseMode || isDemoSiteMode) && (
                             <Tag
                               color={isSelfUseMode ? 'purple' : 'blue'}
@@ -495,14 +543,21 @@ const HeaderBar = () => {
                     >
                       <Avatar
                         size='small'
-                        color={stringToColor(userState.user.display_name || userState.user.username)}
+                        color={stringToColor(
+                          userState.user.display_name ||
+                            userState.user.username,
+                        )}
                         style={avatarStyle}
                       >
-                        {(userState.user.display_name || userState.user.username)[0]}
+                        {
+                          (userState.user.display_name ||
+                            userState.user.username)[0]
+                        }
                       </Avatar>
                       {styleState.isMobile ? null : (
                         <Text style={{ marginLeft: '4px', fontWeight: '500' }}>
-                          {userState.user.display_name || userState.user.username}
+                          {userState.user.display_name ||
+                            userState.user.username}
                         </Text>
                       )}
                     </Dropdown>

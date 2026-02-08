@@ -16,464 +16,513 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
-import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { UserContext } from '../../context/User/index.js';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { SSE } from 'sse';
 import {
-  API,
-  getUserIdFromLocalStorage,
-  showError,
-} from '../../helpers/index.js';
-import {
+  Button,
   Card,
   Chat,
   Input,
   Layout,
   Select,
   Slider,
+  Switch,
+  Tag,
   TextArea,
   Typography,
-  Button,
-  Highlight,
 } from '@douyinfe/semi-ui';
-import { SSE } from 'sse';
 import { IconSetting } from '@douyinfe/semi-icons';
-import { StyleContext } from '../../context/Style/index.js';
 import { useTranslation } from 'react-i18next';
+
+import { UserContext } from '../../context/User/index.js';
+import { StyleContext } from '../../context/Style/index.js';
+import { API, getUserIdFromLocalStorage, showError } from '../../helpers/index.js';
 import { renderGroupOption, truncateText } from '../../helpers/render.js';
 
 const roleInfo = {
   user: {
-    name: 'User',
+    name: '用户',
     avatar:
       'https://lf3-static.bytednsdoc.com/obj/eden-cn/ptlz_zlp/ljhwZthlaukjlkulzlp/docs-icon.png',
   },
   assistant: {
-    name: 'Assistant',
+    name: '助手',
     avatar: 'logo.png',
   },
   system: {
-    name: 'System',
+    name: '系统',
     avatar:
       'https://lf3-static.bytednsdoc.com/obj/eden-cn/ptlz_zlp/ljhwZthlaukjlkulzlp/other/logo.png',
   },
 };
 
-let id = 4;
-function getId() {
-  return `${id++}`;
-}
+let idSeed = 100;
+const getId = () => `${idSeed++}`;
 
 const Playground = () => {
   const { t } = useTranslation();
-
-  const defaultMessage = [
-    {
-      role: 'user',
-      id: '2',
-      createAt: 1715676751919,
-      content: t('你好'),
-    },
-    {
-      role: 'assistant',
-      id: '3',
-      createAt: 1715676751919,
-      content: t('你好，请问有什么可以帮助您的吗？'),
-    },
-  ];
+  const [searchParams] = useSearchParams();
+  const [userState] = useContext(UserContext);
+  const [styleState] = useContext(StyleContext);
 
   const [inputs, setInputs] = useState({
     model: 'gpt-4o-mini',
     group: '',
-    max_tokens: 0,
-    temperature: 0,
+    max_tokens: 4096,
+    temperature: 0.7,
+    top_p: 1,
   });
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [userState, userDispatch] = useContext(UserContext);
-  const [status, setStatus] = useState({});
   const [systemPrompt, setSystemPrompt] = useState(
-    'You are a helpful assistant. You can help me by answering my questions. You can also ask me questions.',
+    '你是一个乐于助人的助手，请清晰、准确地回答问题。',
   );
-  const [message, setMessage] = useState(defaultMessage);
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      id: getId(),
+      createAt: Date.now(),
+      content: '你好，请问有什么可以帮助您的吗？',
+      status: 'complete',
+    },
+  ]);
   const [models, setModels] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [showSettings, setShowSettings] = useState(true);
-  const [styleState, styleDispatch] = useContext(StyleContext);
+  const [showSettings, setShowSettings] = useState(!styleState.isMobile);
+  const [showDebug, setShowDebug] = useState(false);
+  const [customBodyEnabled, setCustomBodyEnabled] = useState(false);
+  const [customBody, setCustomBody] = useState('');
 
   const handleInputChange = (name, value) => {
-    setInputs((inputs) => ({ ...inputs, [name]: value }));
+    setInputs((prev) => ({ ...prev, [name]: value }));
   };
 
-  useEffect(() => {
-    if (searchParams.get('expired')) {
-      showError(t('未登录或登录已过期，请重新登录！'));
+  const getSystemMessage = useCallback(() => {
+    if (!systemPrompt || !systemPrompt.trim()) {
+      return null;
     }
-    let status = localStorage.getItem('status');
-    if (status) {
-      status = JSON.parse(status);
-      setStatus(status);
-    }
-    loadModels();
-    loadGroups();
-  }, []);
+    return {
+      role: 'system',
+      content: systemPrompt.trim(),
+    };
+  }, [systemPrompt]);
 
-  const loadModels = async () => {
-    let res = await API.get(`/api/user/models`);
-    const { success, message, data } = res.data;
-    if (success) {
-      let localModelOptions = data.map((model) => ({
-        label: model,
-        value: model,
-      }));
-      setModels(localModelOptions);
-    } else {
-      showError(t(message));
-    }
-  };
+  const buildPayload = useCallback(
+    (conversationMessages) => {
+      const payload = {
+        messages: conversationMessages,
+        stream: true,
+        model: inputs.model,
+        group: inputs.group,
+        temperature: Number(inputs.temperature),
+        top_p: Number(inputs.top_p),
+      };
 
-  const loadGroups = async () => {
-    let res = await API.get(`/api/user/self/groups`);
-    const { success, message, data } = res.data;
-    if (success) {
-      let localGroupOptions = Object.entries(data).map(([group, info]) => ({
-        label: truncateText(info.desc, '50%'),
-        value: group,
-        ratio: info.ratio,
-        fullLabel: info.desc, // 保存完整文本用于tooltip
-      }));
-
-      if (localGroupOptions.length === 0) {
-        localGroupOptions = [
-          {
-            label: t('用户分组'),
-            value: '',
-            ratio: 1,
-          },
-        ];
-      } else {
-        const localUser = JSON.parse(localStorage.getItem('user'));
-        const userGroup =
-          (userState.user && userState.user.group) ||
-          (localUser && localUser.group);
-
-        if (userGroup) {
-          const userGroupIndex = localGroupOptions.findIndex(
-            (g) => g.value === userGroup,
-          );
-          if (userGroupIndex > -1) {
-            const userGroupOption = localGroupOptions.splice(
-              userGroupIndex,
-              1,
-            )[0];
-            localGroupOptions.unshift(userGroupOption);
-          }
-        }
+      const maxTokens = Number(inputs.max_tokens);
+      if (Number.isFinite(maxTokens) && maxTokens > 0) {
+        payload.max_tokens = maxTokens;
       }
 
-      setGroups(localGroupOptions);
-      handleInputChange('group', localGroupOptions[0].value);
-    } else {
-      showError(t(message));
-    }
-  };
+      if (!customBodyEnabled) {
+        return payload;
+      }
 
-  const commonOuterStyle = {
-    border: '1px solid var(--semi-color-border)',
-    borderRadius: '16px',
-    margin: '0px 8px',
-  };
+      if (!customBody.trim()) {
+        throw new Error('已开启自定义请求体，但内容为空');
+      }
 
-  const getSystemMessage = () => {
-    if (systemPrompt !== '') {
+      const parsedCustomBody = JSON.parse(customBody);
       return {
-        role: 'system',
-        id: '1',
-        createAt: 1715676751919,
-        content: systemPrompt,
+        ...parsedCustomBody,
+        messages: parsedCustomBody.messages || conversationMessages,
+        stream: true,
       };
-    }
-  };
+    },
+    [customBody, customBodyEnabled, inputs],
+  );
 
-  let handleSSE = (payload) => {
-    let source = new SSE('/pg/chat/completions', {
-      headers: {
-        'Content-Type': 'application/json',
-        'Veloera-User': getUserIdFromLocalStorage(),
-      },
-      method: 'POST',
-      payload: JSON.stringify(payload),
-    });
-    source.addEventListener('message', (e) => {
-      // 只有收到 [DONE] 时才结束
-      if (e.data === '[DONE]') {
+  const payloadPreview = useMemo(() => {
+    const previewMessages = [
+      ...(getSystemMessage() ? [getSystemMessage()] : []),
+      { role: 'user', content: '示例问题' },
+    ];
+
+    try {
+      return JSON.stringify(buildPayload(previewMessages), null, 2);
+    } catch (error) {
+      return `预览失败: ${error.message}`;
+    }
+  }, [buildPayload, getSystemMessage]);
+
+  const completeAssistantMessage = useCallback((assistantId, status = 'complete') => {
+    setMessages((prev) =>
+      prev.map((item) =>
+        item.id === assistantId && item.role === 'assistant'
+          ? { ...item, status }
+          : item,
+      ),
+    );
+  }, []);
+
+  const appendAssistantMessage = useCallback((assistantId, deltaContent) => {
+    if (!deltaContent) {
+      return;
+    }
+
+    setMessages((prev) =>
+      prev.map((item) =>
+        item.id === assistantId && item.role === 'assistant'
+          ? {
+              ...item,
+              content: `${item.content || ''}${deltaContent}`,
+              status: 'incomplete',
+            }
+          : item,
+      ),
+    );
+  }, []);
+
+  const handleSSE = useCallback(
+    (payload, assistantId) => {
+      const source = new SSE('/pg/chat/completions', {
+        headers: {
+          'Content-Type': 'application/json',
+          'Veloera-User': getUserIdFromLocalStorage(),
+        },
+        method: 'POST',
+        payload: JSON.stringify(payload),
+      });
+
+      source.addEventListener('message', (event) => {
+        if (event.data === '[DONE]') {
+          source.close();
+          completeAssistantMessage(assistantId);
+          return;
+        }
+
+        try {
+          const chunk = JSON.parse(event.data);
+          const delta =
+            chunk?.choices?.[0]?.delta?.content ||
+            chunk?.choices?.[0]?.message?.content ||
+            '';
+          appendAssistantMessage(assistantId, delta);
+        } catch (error) {
+          // Ignore malformed chunks and continue streaming.
+        }
+      });
+
+      source.addEventListener('error', () => {
         source.close();
-        completeMessage();
+        completeAssistantMessage(assistantId, 'error');
+      });
+
+      source.stream();
+    },
+    [appendAssistantMessage, completeAssistantMessage],
+  );
+
+  const onMessageSend = useCallback(
+    (content) => {
+      if (!content || !content.trim()) {
         return;
       }
 
-      let payload = JSON.parse(e.data);
-      // 检查是否有 delta content
-      if (payload.choices?.[0]?.delta?.content) {
-        generateMockResponse(payload.choices[0].delta.content);
-      }
-    });
-
-    source.addEventListener('error', (e) => {
-      generateMockResponse(e.data);
-      completeMessage('error');
-    });
-
-    source.addEventListener('readystatechange', (e) => {
-      if (e.readyState >= 2) {
-        if (source.status === undefined) {
-          source.close();
-          completeMessage();
-        }
-      }
-    });
-    source.stream();
-  };
-
-  const onMessageSend = useCallback(
-    (content, attachment) => {
-      console.log('attachment: ', attachment);
-      setMessage((prevMessage) => {
-        const newMessage = [
-          ...prevMessage,
-          {
-            role: 'user',
-            content: content,
-            createAt: Date.now(),
-            id: getId(),
-          },
-        ];
-
-        // 将 getPayload 移到这里
-        const getPayload = () => {
-          let systemMessage = getSystemMessage();
-          let messages = newMessage.map((item) => {
-            return {
-              role: item.role,
-              content: item.content,
-            };
-          });
-          if (systemMessage) {
-            messages.unshift(systemMessage);
-          }
-          return {
-            messages: messages,
-            stream: true,
-            model: inputs.model,
-            group: inputs.group,
-            max_tokens: parseInt(inputs.max_tokens),
-            temperature: inputs.temperature,
-          };
+      setMessages((prev) => {
+        const userMessage = {
+          role: 'user',
+          content,
+          createAt: Date.now(),
+          id: getId(),
+          status: 'complete',
         };
-
-        // 使用更新后的消息状态调用 handleSSE
-        handleSSE(getPayload());
-        newMessage.push({
+        const assistantId = getId();
+        const assistantMessage = {
           role: 'assistant',
           content: '',
           createAt: Date.now(),
-          id: getId(),
+          id: assistantId,
           status: 'loading',
-        });
-        return newMessage;
+        };
+
+        const nextMessages = [...prev, userMessage];
+        const systemMessage = getSystemMessage();
+        const requestMessages = [
+          ...(systemMessage ? [systemMessage] : []),
+          ...nextMessages.map((item) => ({
+            role: item.role,
+            content: item.content,
+          })),
+        ];
+
+        try {
+          const payload = buildPayload(requestMessages);
+          handleSSE(payload, assistantId);
+        } catch (error) {
+          showError(error.message || '请求体构建失败');
+          return prev;
+        }
+
+        return [...nextMessages, assistantMessage];
       });
     },
-    [getSystemMessage],
+    [buildPayload, getSystemMessage, handleSSE],
   );
 
-  const completeMessage = useCallback((status = 'complete') => {
-    // console.log("Complete Message: ", status)
-    setMessage((prevMessage) => {
-      const lastMessage = prevMessage[prevMessage.length - 1];
-      // only change the status if the last message is not complete and not error
-      if (lastMessage.status === 'complete' || lastMessage.status === 'error') {
-        return prevMessage;
+  const loadModels = useCallback(async () => {
+    const res = await API.get('/api/user/models');
+    const { success, message, data } = res?.data || {};
+    if (!success) {
+      showError(t(message || '加载模型失败'));
+      return;
+    }
+
+    const modelList = Array.isArray(data) ? data : [];
+    const modelOptions = modelList.map((modelName) => ({
+      label: modelName,
+      value: modelName,
+    }));
+    setModels(modelOptions);
+    setInputs((prev) => {
+      if (prev.model || modelList.length === 0) {
+        return prev;
       }
-      return [...prevMessage.slice(0, -1), { ...lastMessage, status: status }];
+      return { ...prev, model: modelList[0] };
     });
-  }, []);
+  }, [t]);
 
-  const generateMockResponse = useCallback((content) => {
-    // console.log("Generate Mock Response: ", content);
-    setMessage((message) => {
-      const lastMessage = message[message.length - 1];
-      let newMessage = { ...lastMessage };
-      if (
-        lastMessage.status === 'loading' ||
-        lastMessage.status === 'incomplete'
-      ) {
-        newMessage = {
-          ...newMessage,
-          content: (lastMessage.content || '') + content,
-          status: 'incomplete',
-        };
+  const loadGroups = useCallback(async () => {
+    const res = await API.get('/api/user/self/groups');
+    const { success, message, data } = res?.data || {};
+    if (!success) {
+      showError(t(message || '加载分组失败'));
+      return;
+    }
+
+    let groupOptions = Object.entries(data || {}).map(([group, info]) => ({
+      label: truncateText(info.desc, '50%'),
+      value: group,
+      ratio: info.ratio,
+      fullLabel: info.desc,
+    }));
+
+    if (groupOptions.length === 0) {
+      groupOptions = [{
+        label: '用户分组',
+        value: '',
+        ratio: 1,
+      }];
+    } else {
+      const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const userGroup = userState?.user?.group || localUser?.group;
+      if (userGroup) {
+        const userGroupIndex = groupOptions.findIndex(
+          (groupItem) => groupItem.value === userGroup,
+        );
+        if (userGroupIndex > -1) {
+          const selectedGroup = groupOptions.splice(userGroupIndex, 1)[0];
+          groupOptions.unshift(selectedGroup);
+        }
       }
-      return [...message.slice(0, -1), newMessage];
+    }
+
+    setGroups(groupOptions);
+    setInputs((prev) => {
+      if (prev.group) {
+        return prev;
+      }
+      return { ...prev, group: groupOptions[0]?.value ?? '' };
     });
-  }, []);
+  }, [t, userState?.user?.group]);
 
-  const SettingsToggle = () => {
-    if (!styleState.isMobile) return null;
-    return (
-      <Button
-        icon={<IconSetting />}
-        style={{
-          position: 'absolute',
-          left: showSettings ? -10 : -20,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          zIndex: 1000,
-          width: 40,
-          height: 40,
-          borderRadius: '0 20px 20px 0',
-          padding: 0,
-          boxShadow: '2px 0 8px rgba(0, 0, 0, 0.15)',
-        }}
-        onClick={() => setShowSettings(!showSettings)}
-        theme='solid'
-        type='primary'
-      />
-    );
-  };
+  useEffect(() => {
+    if (searchParams.get('expired')) {
+      showError('未登录或登录已过期，请重新登录');
+    }
+    loadModels();
+    loadGroups();
+  }, [loadGroups, loadModels, searchParams]);
 
-  function CustomInputRender(props) {
-    const { detailProps } = props;
-    const { clearContextNode, uploadNode, inputNode, sendNode, onClick } =
-      detailProps;
-
-    return (
-      <div
-        style={{
-          margin: '8px 16px',
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'flex-end',
-          borderRadius: 16,
-          padding: 10,
-          border: '1px solid var(--semi-color-border)',
-        }}
-        onClick={onClick}
-      >
-        {/*{uploadNode}*/}
-        {inputNode}
-        {sendNode}
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!styleState.isMobile) {
+      setShowSettings(true);
+    }
+  }, [styleState.isMobile]);
 
   const renderInputArea = useCallback((props) => {
-    return <CustomInputRender {...props} />;
+    const { detailProps } = props;
+    const { inputNode, sendNode, onClick } = detailProps;
+
+    return (
+      <div className='playground-chat-input-shell' onClick={onClick}>
+        <div className='playground-chat-input-core'>{inputNode}</div>
+        <div className='playground-chat-input-action'>{sendNode}</div>
+      </div>
+    );
   }, []);
 
-  return (
-    <Layout style={{ height: '100%' }}>
-      {(showSettings || !styleState.isMobile) && (
-        <Layout.Sider
-          style={{ display: styleState.isMobile ? 'block' : 'initial' }}
-        >
-          <Card style={commonOuterStyle}>
-            <div style={{ marginTop: 10 }}>
-              <Typography.Text strong>{t('分组')}：</Typography.Text>
-            </div>
-            <Select
-              placeholder={t('请选择分组')}
-              name='group'
-              required
-              selection
-              onChange={(value) => {
-                handleInputChange('group', value);
-              }}
-              value={inputs.group}
-              autoComplete='new-password'
-              optionList={groups}
-              renderOptionItem={renderGroupOption}
-              style={{ width: '100%' }}
-            />
-            <div style={{ marginTop: 10 }}>
-              <Typography.Text strong>{t('模型')}：</Typography.Text>
-            </div>
-            <Select
-              placeholder={t('请选择模型')}
-              name='model'
-              required
-              selection
-              searchPosition='dropdown'
-              filter
-              onChange={(value) => {
-                handleInputChange('model', value);
-              }}
-              value={inputs.model}
-              autoComplete='new-password'
-              optionList={models}
-            />
-            <div style={{ marginTop: 10 }}>
-              <Typography.Text strong>Temperature：</Typography.Text>
-            </div>
-            <Slider
-              step={0.1}
-              min={0.1}
-              max={1}
-              value={inputs.temperature}
-              onChange={(value) => {
-                handleInputChange('temperature', value);
-              }}
-            />
-            <div style={{ marginTop: 10 }}>
-              <Typography.Text strong>MaxTokens：</Typography.Text>
-            </div>
-            <Input
-              placeholder='MaxTokens'
-              name='max_tokens'
-              required
-              autoComplete='new-password'
-              defaultValue={0}
-              value={inputs.max_tokens}
-              onChange={(value) => {
-                handleInputChange('max_tokens', value);
-              }}
-            />
+  const settingToggle =
+    styleState.isMobile && !showSettings ? (
+      <Button
+        icon={<IconSetting />}
+        type='primary'
+        theme='solid'
+        className='playground-mobile-setting-toggle'
+        onClick={() => setShowSettings(true)}
+      />
+    ) : null;
 
-            <div style={{ marginTop: 10 }}>
-              <Typography.Text strong>System：</Typography.Text>
+  return (
+    <Layout className='playground-shell'>
+      {(showSettings || !styleState.isMobile) && (
+        <Layout.Sider className='playground-config-sider'>
+          <Card className='playground-config-card' bodyStyle={{ padding: 16 }}>
+            <div className='playground-config-header'>
+              <div className='playground-config-title-row'>
+                <IconSetting />
+                <Typography.Text strong className='playground-config-title'>
+                  模型配置
+                </Typography.Text>
+              </div>
+              {styleState.isMobile && (
+                <Button
+                  size='small'
+                  theme='borderless'
+                  type='tertiary'
+                  onClick={() => setShowSettings(false)}
+                >
+                  收起
+                </Button>
+              )}
             </div>
-            <TextArea
-              placeholder='System Prompt'
-              name='system'
-              required
-              autoComplete='new-password'
-              autosize
-              defaultValue={systemPrompt}
-              // value={systemPrompt}
-              onChange={(value) => {
-                setSystemPrompt(value);
-              }}
-            />
+
+            <div className='playground-config-section'>
+              <div className='playground-config-switch'>
+                <Typography.Text strong>自定义请求体模式</Typography.Text>
+                <Switch
+                  checked={customBodyEnabled}
+                  onChange={(checked) => setCustomBodyEnabled(checked)}
+                />
+              </div>
+              {customBodyEnabled && (
+                <TextArea
+                  autosize={{ minRows: 5, maxRows: 10 }}
+                  value={customBody}
+                  placeholder='请输入 JSON 请求体，messages 将自动兼容'
+                  onChange={setCustomBody}
+                />
+              )}
+            </div>
+
+            <div className='playground-config-section'>
+              <Typography.Text strong className='playground-label'>分组</Typography.Text>
+              <Select
+                placeholder='请选择分组'
+                value={inputs.group}
+                optionList={groups}
+                renderOptionItem={renderGroupOption}
+                onChange={(value) => handleInputChange('group', value)}
+              />
+            </div>
+
+            <div className='playground-config-section'>
+              <Typography.Text strong className='playground-label'>模型</Typography.Text>
+              <Select
+                filter
+                searchPosition='dropdown'
+                placeholder='请选择模型'
+                value={inputs.model}
+                optionList={models}
+                onChange={(value) => handleInputChange('model', value)}
+              />
+            </div>
+
+            <div className='playground-config-section'>
+              <div className='playground-slider-header'>
+                <Typography.Text strong>Temperature</Typography.Text>
+                <Tag color='blue'>{Number(inputs.temperature).toFixed(1)}</Tag>
+              </div>
+              <Typography.Text type='tertiary' size='small'>
+                控制输出的随机性和创造性
+              </Typography.Text>
+              <Slider
+                step={0.1}
+                min={0}
+                max={2}
+                value={inputs.temperature}
+                onChange={(value) => handleInputChange('temperature', value)}
+              />
+            </div>
+
+            <div className='playground-config-section'>
+              <div className='playground-slider-header'>
+                <Typography.Text strong>Top P</Typography.Text>
+                <Tag color='green'>{Number(inputs.top_p).toFixed(1)}</Tag>
+              </div>
+              <Typography.Text type='tertiary' size='small'>
+                核采样，控制词汇选择的多样性
+              </Typography.Text>
+              <Slider
+                step={0.1}
+                min={0}
+                max={1}
+                value={inputs.top_p}
+                onChange={(value) => handleInputChange('top_p', value)}
+              />
+            </div>
+
+            <div className='playground-config-section'>
+              <Typography.Text strong className='playground-label'>Max Tokens</Typography.Text>
+              <Input
+                value={String(inputs.max_tokens)}
+                onChange={(value) => handleInputChange('max_tokens', value)}
+                placeholder='默认由模型决定'
+              />
+            </div>
+
+            <div className='playground-config-section'>
+              <Typography.Text strong className='playground-label'>系统提示词</Typography.Text>
+              <TextArea
+                autosize={{ minRows: 4, maxRows: 8 }}
+                value={systemPrompt}
+                onChange={setSystemPrompt}
+                placeholder='你是一个乐于助人的助手...'
+              />
+            </div>
           </Card>
         </Layout.Sider>
       )}
-      <Layout.Content>
-        <div style={{ height: '100%', position: 'relative' }}>
-          <SettingsToggle />
-          <Chat
-            chatBoxRenderConfig={{
-              renderChatBoxAction: () => {
-                return <div></div>;
-              },
-            }}
-            renderInputArea={renderInputArea}
-            roleConfig={roleInfo}
-            style={commonOuterStyle}
-            chats={message}
-            onMessageSend={onMessageSend}
-            showClearContext
-            onClear={() => {
-              setMessage([]);
-            }}
-          />
+
+      <Layout.Content className='playground-chat-content'>
+        {settingToggle}
+        <div className='playground-chat-card'>
+          <div className='playground-chat-header'>
+            <div>
+              <Typography.Title heading={4} style={{ margin: 0 }}>
+                AI 对话
+              </Typography.Title>
+              <Typography.Text type='tertiary'>
+                当前模型：{inputs.model || '-'}
+              </Typography.Text>
+            </div>
+            <div className='playground-chat-header-right'>
+              <Typography.Text type='secondary'>显示调试</Typography.Text>
+              <Switch checked={showDebug} onChange={setShowDebug} />
+            </div>
+          </div>
+
+          {showDebug && (
+            <pre className='playground-debug-panel'>{payloadPreview}</pre>
+          )}
+
+          <div className='playground-chat-main'>
+            <Chat
+              roleConfig={roleInfo}
+              className='playground-chat-component'
+              renderInputArea={renderInputArea}
+              chats={messages}
+              onMessageSend={onMessageSend}
+            />
+          </div>
         </div>
       </Layout.Content>
     </Layout>

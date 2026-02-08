@@ -1875,7 +1875,12 @@ const updateModelsCallback = useCallback((newModels) => {
               onChange={(value) => {
                 setCustomModel(value); // Allow space and comma for input
               }}
-              onPressEnter={addCustomModels} // Add on press enter
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  addCustomModels();
+                }
+              }}
             />
           </div>
           <div style={{ marginTop: 10 }}>
@@ -2131,4 +2136,3 @@ const updateModelsCallback = useCallback((newModels) => {
 };
 
 export default EditChannel;
-

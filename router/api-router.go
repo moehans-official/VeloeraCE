@@ -31,6 +31,11 @@ func SetApiRouter(router *gin.Engine) {
 	apiRouter := router.Group("/api")
 	apiRouter.Use(gzip.Gzip(gzip.DefaultCompression))
 	apiRouter.Use(middleware.GlobalAPIRateLimit())
+	// API responses are user-specific and should never be cached by browsers/proxies.
+	apiRouter.Use(func(c *gin.Context) {
+		c.Header("Cache-Control", "no-store")
+		c.Next()
+	})
 	{
 		apiRouter.GET("/setup", controller.GetSetup)
 		apiRouter.POST("/setup", controller.PostSetup)
@@ -42,6 +47,22 @@ func SetApiRouter(router *gin.Engine) {
 		//apiRouter.GET("/midjourney", controller.GetMidjourney)
 		apiRouter.GET("/home_page_content", controller.GetHomePageContent)
 		apiRouter.GET("/pricing", middleware.TryUserAuth(), controller.GetPricing)
+		planRoute := apiRouter.Group("/plan")
+		{
+			planRoute.GET("/", middleware.UserAuth(), controller.GetSubscriptionPlans)
+			planRoute.GET("/self", middleware.UserAuth(), controller.GetUserPlanOrders)
+			planRoute.GET("/purchase", controller.PurchaseSubscriptionPlanNotAllowed)
+			planRoute.POST("/purchase", middleware.UserAuth(), controller.PurchaseSubscriptionPlan)
+
+			planAdminRoute := planRoute.Group("/admin")
+			planAdminRoute.Use(middleware.AdminAuth())
+			{
+				planAdminRoute.GET("/", controller.AdminGetSubscriptionPlans)
+				planAdminRoute.POST("/", controller.AdminCreateSubscriptionPlan)
+				planAdminRoute.PUT("/", controller.AdminUpdateSubscriptionPlan)
+				planAdminRoute.DELETE("/:id", controller.AdminDeleteSubscriptionPlan)
+			}
+		}
 		apiRouter.GET("/verification", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendEmailVerification)
 		apiRouter.GET("/reset_password", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendPasswordResetEmail)
 		apiRouter.POST("/user/reset", middleware.CriticalRateLimit(), controller.ResetPassword)

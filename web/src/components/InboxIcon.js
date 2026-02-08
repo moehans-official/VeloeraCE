@@ -16,7 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Badge, Button, Tooltip } from '@douyinfe/semi-ui';
 import { IconMail } from '@douyinfe/semi-icons';
 import { useNavigate } from 'react-router-dom';
@@ -28,21 +28,25 @@ const InboxIcon = () => {
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const loadingRef = useRef(false);
+  const initializedRef = useRef(false);
 
   const loadUnreadCount = async () => {
-    if (loading) return;
-    
+    if (loadingRef.current) return;
+
+    loadingRef.current = true;
     setLoading(true);
     try {
       const res = await API.get('/api/user/messages/unread_count');
-      const { success, data } = res.data;
-      if (success) {
+      const { success, data } = res?.data || {};
+      if (success && data) {
         setUnreadCount(data.unread_count || 0);
       }
     } catch (error) {
       // Silently fail - unread count is not critical
       console.error('Failed to load unread count:', error);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   };
@@ -52,11 +56,16 @@ const InboxIcon = () => {
   };
 
   useEffect(() => {
+    if (initializedRef.current) {
+      return;
+    }
+    initializedRef.current = true;
+
     loadUnreadCount();
-    
+
     // Poll for unread count every 30 seconds
     const interval = setInterval(loadUnreadCount, 30000);
-    
+
     return () => clearInterval(interval);
   }, []);
 

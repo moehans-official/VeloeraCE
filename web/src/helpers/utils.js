@@ -19,7 +19,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 import { Toast } from '@douyinfe/semi-ui';
 import { toastConstants } from '../constants';
 import React from 'react';
-import { toast } from 'react-toastify';
 
 const HTMLToastContent = ({ htmlContent }) => {
   return <div dangerouslySetInnerHTML={{ __html: htmlContent }} />;
@@ -43,6 +42,18 @@ export function getSystemName() {
   let system_name = localStorage.getItem('system_name');
   if (!system_name) return 'VeloeraCE';
   return system_name;
+}
+
+export function getSystemNameColor() {
+  return localStorage.getItem('system_name_color') || '';
+}
+
+export function getHideHeaderLogoEnabled() {
+  return localStorage.getItem('hide_header_logo_enabled') === 'true';
+}
+
+export function getHideHeaderTextEnabled() {
+  return localStorage.getItem('hide_header_text_enabled') === 'true';
 }
 
 export function getLogo() {
@@ -91,7 +102,6 @@ let showErrorOptions = { autoClose: toastConstants.ERROR_TIMEOUT };
 let showWarningOptions = { autoClose: toastConstants.WARNING_TIMEOUT };
 let showSuccessOptions = { autoClose: toastConstants.SUCCESS_TIMEOUT };
 let showInfoOptions = { autoClose: toastConstants.INFO_TIMEOUT };
-let showNoticeOptions = { autoClose: false };
 
 if (isMobile()) {
   showErrorOptions.position = 'top-center';
@@ -102,9 +112,6 @@ if (isMobile()) {
 
   showInfoOptions.position = 'top-center';
   // showInfoOptions.transition = 'flip';
-
-  showNoticeOptions.position = 'top-center';
-  // showNoticeOptions.transition = 'flip';
 }
 
 export function showError(error) {
@@ -113,7 +120,7 @@ export function showError(error) {
     if (error.name === 'AxiosError') {
       switch (error.response.status) {
         case 401:
-          window.localStorage.removeItem('user')
+          window.localStorage.removeItem('user');
           // toast.error('错误：未登录或登录已过期，请重新登录！', showErrorOptions);
           window.location.href = `/login?expired=true&returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`;
           break;
@@ -159,7 +166,10 @@ export function showInfo(message) {
 
 export function showNotice(message, isHTML = false) {
   if (isHTML) {
-    toast(<HTMLToastContent htmlContent={message} />, showNoticeOptions);
+    Toast.info({
+      content: <HTMLToastContent htmlContent={message} />,
+      duration: 0,
+    });
   } else {
     Toast.info(message);
   }

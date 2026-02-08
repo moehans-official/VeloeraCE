@@ -16,34 +16,74 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
-import { getUserIdFromLocalStorage, showError } from './utils';
+import { getUserIdFromLocalStorage } from './utils';
 import axios from 'axios';
 
-export let API = axios.create({
-  baseURL: import.meta.env.VITE_REACT_APP_SERVER_URL
+const getServerBaseURL = () =>
+  import.meta.env.VITE_REACT_APP_SERVER_URL
     ? import.meta.env.VITE_REACT_APP_SERVER_URL
-    : '',
-  headers: {
-    'Veloera-User': getUserIdFromLocalStorage(),
-    'Cache-Control': 'no-store',
-  },
-});
+    : '';
+
+const isAbsoluteUrl = (url) => /^https?:\/\//i.test(url || '');
+
+const normalizeApiUrl = (url, baseURL) => {
+  if (typeof url !== 'string' || url.length === 0 || isAbsoluteUrl(url)) {
+    return url;
+  }
+
+  if (url.startsWith('/api/api/')) {
+    return url.replace('/api/api/', '/api/');
+  }
+
+  const normalizedBaseURL = String(baseURL || '').replace(/\/+$/, '');
+  if (normalizedBaseURL.endsWith('/api') && url.startsWith('/api/')) {
+    return url.slice(4);
+  }
+
+  return url;
+};
+
+const attachInterceptors = (client) => {
+  client.interceptors.request.use((config) => {
+    const baseURL = config?.baseURL || client.defaults.baseURL || '';
+    return {
+      ...config,
+      url: normalizeApiUrl(config?.url, baseURL),
+    };
+  });
+
+  client.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error?.response?.status === 401) {
+        window.localStorage.removeItem('user');
+        const returnTo = encodeURIComponent(
+          window.location.pathname + window.location.search,
+        );
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.href = `/login?expired=true&returnTo=${returnTo}`;
+        }
+      }
+      return Promise.reject(error);
+    },
+  );
+
+  return client;
+};
+
+const createApiClient = () =>
+  attachInterceptors(
+    axios.create({
+      baseURL: getServerBaseURL(),
+      headers: {
+        'Veloera-User': getUserIdFromLocalStorage(),
+        'Cache-Control': 'no-store',
+      },
+    }),
+  );
+
+export let API = createApiClient();
 
 export function updateAPI() {
-  API = axios.create({
-    baseURL: import.meta.env.VITE_REACT_APP_SERVER_URL
-      ? import.meta.env.VITE_REACT_APP_SERVER_URL
-      : '',
-    headers: {
-      'Veloera-User': getUserIdFromLocalStorage(),
-      'Cache-Control': 'no-store',
-    },
-  });
+  API = createApiClient();
 }
-
-API.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    showError(error);
-  },
-);

@@ -16,305 +16,300 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Banner,
   Button,
+  Card,
   Col,
   Form,
   Row,
-  Modal,
-  Space,
-  Card,
   Switch,
 } from '@douyinfe/semi-ui';
-import { API, showError, showSuccess, timestamp2string } from '../helpers';
-import { marked } from 'marked';
-import { useTranslation } from 'react-i18next';
-import { StatusContext } from '../context/Status/index.js';
 import Text from '@douyinfe/semi-ui/lib/es/typography/text';
+import { useTranslation } from 'react-i18next';
+import { API, showError, showSuccess } from '../helpers';
+
+const defaultInputs = {
+  Notice: '',
+  SystemName: '',
+  SystemNameColor: '',
+  Logo: '',
+  Footer: '',
+  About: '',
+  HomePageContent: '',
+  custom_head_html: '',
+  global_css: '',
+  global_js: '',
+  DisplayInCurrencyEnabled: false,
+  DisplayTokenStatEnabled: false,
+  HideHeaderLogoEnabled: false,
+  HideHeaderTextEnabled: false,
+};
 
 const OtherSetting = () => {
   const { t } = useTranslation();
-  let [inputs, setInputs] = useState({
-    Notice: '',
-    SystemName: '',
-    Logo: '',
-    Footer: '',
-    About: '',
-    HomePageContent: '',
-    custom_head_html: '',
-    global_css: '',
-    global_js: '',
-    DisplayInCurrencyEnabled: false,
-    DisplayTokenStatEnabled: false,
-  });
-  let [loading, setLoading] = useState(false);
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [statusState, statusDispatch] = useContext(StatusContext);
-  const [updateData, setUpdateData] = useState({
-    tag_name: '',
-    content: '',
-  });
-
-  const updateOption = async (key, value) => {
-    setLoading(true);
-    const res = await API.put('/api/option/', {
-      key,
-      value,
-    });
-    const { success, message } = res.data;
-    if (success) {
-      setInputs((inputs) => ({ ...inputs, [key]: value }));
-    } else {
-      showError(message);
-    }
-    setLoading(false);
-  };
+  const [inputs, setInputs] = useState(defaultInputs);
 
   const [loadingInput, setLoadingInput] = useState({
     Notice: false,
     SystemName: false,
+    SystemNameColor: false,
     Logo: false,
     HomePageContent: false,
     About: false,
     Footer: false,
-    CheckUpdate: false,
     custom_head_html: false,
     global_css: false,
     global_js: false,
   });
-  const handleInputChange = async (value, e) => {
-    const name = e.target.id;
-    setInputs((inputs) => ({ ...inputs, [name]: value }));
+
+  const formAPISettingGeneral = useRef();
+  const formAPIPersonalization = useRef();
+
+  const updateOption = async (key, value) => {
+    const valueToStore = typeof value === 'boolean' ? value.toString() : value;
+    const res = await API.put('/api/option/', {
+      key,
+      value: valueToStore,
+    });
+    const { success, message } = res.data;
+    if (success) {
+      setInputs((current) => ({ ...current, [key]: value }));
+      return true;
+    }
+    showError(message);
+    return false;
   };
 
-  // 通用设置
-  const formAPISettingGeneral = useRef();
-  // 通用设置 - Notice
+  const handleInputChange = (value, e) => {
+    const name = e?.target?.id;
+    if (!name) {
+      return;
+    }
+    setInputs((current) => ({ ...current, [name]: value }));
+  };
+
+  const isValidHexColor = (value) => {
+    const normalized = (value || '').trim();
+    return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(normalized);
+  };
+
   const submitNotice = async () => {
     try {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, Notice: true }));
-      await updateOption('Notice', inputs.Notice);
-      showSuccess(t('公告已更新'));
-    } catch (error) {
-      console.error(t('公告更新失败'), error);
-      showError(t('公告更新失败'));
-    } finally {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, Notice: false }));
-    }
-  };
-  // 个性化设置
-  const formAPIPersonalization = useRef();
-  //  个性化设置 - SystemName
-  const submitSystemName = async () => {
-    try {
-      setLoadingInput((loadingInput) => ({
-        ...loadingInput,
-        SystemName: true,
-      }));
-      await updateOption('SystemName', inputs.SystemName);
-      showSuccess(t('系统名称已更新'));
-    } catch (error) {
-      console.error(t('系统名称更新失败'), error);
-      showError(t('系统名称更新失败'));
-    } finally {
-      setLoadingInput((loadingInput) => ({
-        ...loadingInput,
-        SystemName: false,
-      }));
-    }
-  };
-
-  // 个性化设置 - Logo
-  const submitLogo = async () => {
-    try {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, Logo: true }));
-      await updateOption('Logo', inputs.Logo);
-      showSuccess('Logo 已更新');
-    } catch (error) {
-      console.error('Logo 更新失败', error);
-      showError('Logo 更新失败');
-    } finally {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, Logo: false }));
-    }
-  };
-  // 个性化设置 - 首页内容
-  const submitOption = async (key) => {
-    try {
-      setLoadingInput((loadingInput) => ({
-        ...loadingInput,
-        HomePageContent: true,
-      }));
-      await updateOption(key, inputs[key]);
-      showSuccess('首页内容已更新');
-    } catch (error) {
-      console.error('首页内容更新失败', error);
-      showError('首页内容更新失败');
-    } finally {
-      setLoadingInput((loadingInput) => ({
-        ...loadingInput,
-        HomePageContent: false,
-      }));
-    }
-  };
-  // 个性化设置 - 关于
-  const submitAbout = async () => {
-    try {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, About: true }));
-      await updateOption('About', inputs.About);
-      showSuccess('关于内容已更新');
-    } catch (error) {
-      console.error('关于内容更新失败', error);
-      showError('关于内容更新失败');
-    } finally {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, About: false }));
-    }
-  };
-  // 个性化设置 - 页脚
-  const submitFooter = async () => {
-    try {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, Footer: true }));
-      await updateOption('Footer', inputs.Footer);
-      showSuccess('页脚内容已更新');
-    } catch (error) {
-      console.error('页脚内容更新失败', error);
-      showError('页脚内容更新失败');
-    } finally {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, Footer: false }));
-    }
-  };
-
-  // 个性化设置 - 自定义头部HTML
-  const submitCustomHeadHtml = async () => {
-    try {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, custom_head_html: true }));
-      await updateOption('custom_head_html', inputs.custom_head_html);
-      showSuccess('自定义头部HTML已更新');
-    } catch (error) {
-      console.error('自定义头部HTML更新失败', error);
-      showError('自定义头部HTML更新失败');
-    } finally {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, custom_head_html: false }));
-    }
-  };
-
-  // 个性化设置 - 全局CSS样式
-  const submitGlobalCss = async () => {
-    try {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, global_css: true }));
-      await updateOption('global_css', inputs.global_css);
-      showSuccess('全局CSS样式已更新');
-    } catch (error) {
-      console.error('全局CSS样式更新失败', error);
-      showError('全局CSS样式更新失败');
-    } finally {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, global_css: false }));
-    }
-  };
-
-  // 个性化设置 - 全局JavaScript代码
-  const submitGlobalJs = async () => {
-    try {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, global_js: true }));
-      await updateOption('global_js', inputs.global_js);
-      showSuccess('全局JavaScript代码已更新');
-    } catch (error) {
-      console.error('全局JavaScript代码更新失败', error);
-      showError('全局JavaScript代码更新失败');
-    } finally {
-      setLoadingInput((loadingInput) => ({ ...loadingInput, global_js: false }));
-    }
-  };
-
-  const checkUpdate = async () => {
-    try {
-      setLoadingInput((loadingInput) => ({
-        ...loadingInput,
-        CheckUpdate: true,
-      }));
-      // Use a CORS proxy to avoid direct cross-origin requests to GitHub API
-      // Option 1: Use a public CORS proxy service
-      // const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-      // const res = await API.get(
-      //   `${proxyUrl}https://api.github.com/repos/Calcium-Ion/new-api/releases/latest`,
-      // );
-
-      // Option 2: Use the JSON proxy approach which often works better with GitHub API
-      const res = await fetch(
-        'https://api.github.com/repos/moehans-official/VeloeraCE/releases/latest',
-        {
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-            // Adding User-Agent which is often required by GitHub API
-            'User-Agent': 'veloerace-update-checker',
-          },
-        },
-      ).then((response) => response.json());
-
-      // Option 3: Use a local proxy endpoint
-      // Create a cached version of the response to avoid frequent GitHub API calls
-      // const res = await API.get('/api/status/github-latest-release');
-
-      const { tag_name, body } = res;
-      if (tag_name === statusState?.status?.version) {
-        showSuccess(`已是最新版本：${tag_name}`);
-      } else {
-        setUpdateData({
-          tag_name: tag_name,
-          content: marked.parse(body),
-        });
-        setShowUpdateModal(true);
+      setLoadingInput((current) => ({ ...current, Notice: true }));
+      const ok = await updateOption('Notice', inputs.Notice);
+      if (ok) {
+        showSuccess(t('Notice updated'));
       }
     } catch (error) {
-      console.error('Failed to check for updates:', error);
-      showError('检查更新失败，请稍后再试');
+      console.error('Notice update failed', error);
+      showError(t('Notice update failed'));
     } finally {
-      setLoadingInput((loadingInput) => ({
-        ...loadingInput,
-        CheckUpdate: false,
-      }));
+      setLoadingInput((current) => ({ ...current, Notice: false }));
     }
   };
+
+  const submitSystemName = async () => {
+    try {
+      setLoadingInput((current) => ({ ...current, SystemName: true }));
+      const ok = await updateOption('SystemName', inputs.SystemName);
+      if (!ok) {
+        return;
+      }
+      const systemName = (inputs.SystemName || '').trim();
+      if (systemName) {
+        localStorage.setItem('system_name', systemName);
+      } else {
+        localStorage.removeItem('system_name');
+      }
+      window.dispatchEvent(new Event('brandingUpdated'));
+      showSuccess(t('System name updated'));
+    } catch (error) {
+      console.error('System name update failed', error);
+      showError(t('System name update failed'));
+    } finally {
+      setLoadingInput((current) => ({ ...current, SystemName: false }));
+    }
+  };
+
+  const submitSystemNameColor = async () => {
+    const color = (inputs.SystemNameColor || '').trim();
+    if (color !== '' && !isValidHexColor(color)) {
+      showError(t('Please use hex color like #1677ff'));
+      return;
+    }
+
+    try {
+      setLoadingInput((current) => ({ ...current, SystemNameColor: true }));
+      const ok = await updateOption('SystemNameColor', color);
+      if (!ok) {
+        return;
+      }
+      if (color) {
+        localStorage.setItem('system_name_color', color);
+      } else {
+        localStorage.removeItem('system_name_color');
+      }
+      window.dispatchEvent(new Event('brandingUpdated'));
+      showSuccess(t('Logo name color updated'));
+    } catch (error) {
+      console.error('Logo name color update failed', error);
+      showError(t('Logo name color update failed'));
+    } finally {
+      setLoadingInput((current) => ({ ...current, SystemNameColor: false }));
+    }
+  };
+
+  const submitLogo = async () => {
+    try {
+      setLoadingInput((current) => ({ ...current, Logo: true }));
+      const ok = await updateOption('Logo', inputs.Logo);
+      if (!ok) {
+        return;
+      }
+      const logo = (inputs.Logo || '').trim();
+      if (logo) {
+        localStorage.setItem('logo', logo);
+      } else {
+        localStorage.removeItem('logo');
+      }
+      window.dispatchEvent(new Event('brandingUpdated'));
+      showSuccess(t('Logo updated'));
+    } catch (error) {
+      console.error('Logo update failed', error);
+      showError(t('Logo update failed'));
+    } finally {
+      setLoadingInput((current) => ({ ...current, Logo: false }));
+    }
+  };
+
+  const submitOption = async (key) => {
+    try {
+      setLoadingInput((current) => ({ ...current, HomePageContent: true }));
+      const ok = await updateOption(key, inputs[key]);
+      if (ok) {
+        showSuccess(t('Home page content updated'));
+      }
+    } catch (error) {
+      console.error('Home page content update failed', error);
+      showError(t('Home page content update failed'));
+    } finally {
+      setLoadingInput((current) => ({ ...current, HomePageContent: false }));
+    }
+  };
+
+  const submitAbout = async () => {
+    try {
+      setLoadingInput((current) => ({ ...current, About: true }));
+      const ok = await updateOption('About', inputs.About);
+      if (ok) {
+        showSuccess(t('About content updated'));
+      }
+    } catch (error) {
+      console.error('About content update failed', error);
+      showError(t('About content update failed'));
+    } finally {
+      setLoadingInput((current) => ({ ...current, About: false }));
+    }
+  };
+
+  const submitFooter = async () => {
+    try {
+      setLoadingInput((current) => ({ ...current, Footer: true }));
+      const ok = await updateOption('Footer', inputs.Footer);
+      if (ok) {
+        showSuccess(t('Footer content updated'));
+      }
+    } catch (error) {
+      console.error('Footer content update failed', error);
+      showError(t('Footer content update failed'));
+    } finally {
+      setLoadingInput((current) => ({ ...current, Footer: false }));
+    }
+  };
+
+  const submitCustomHeadHtml = async () => {
+    try {
+      setLoadingInput((current) => ({ ...current, custom_head_html: true }));
+      const ok = await updateOption(
+        'custom_head_html',
+        inputs.custom_head_html,
+      );
+      if (ok) {
+        showSuccess(t('Custom head HTML updated'));
+      }
+    } catch (error) {
+      console.error('Custom head HTML update failed', error);
+      showError(t('Custom head HTML update failed'));
+    } finally {
+      setLoadingInput((current) => ({ ...current, custom_head_html: false }));
+    }
+  };
+
+  const submitGlobalCss = async () => {
+    try {
+      setLoadingInput((current) => ({ ...current, global_css: true }));
+      const ok = await updateOption('global_css', inputs.global_css);
+      if (ok) {
+        showSuccess(t('Global CSS updated'));
+      }
+    } catch (error) {
+      console.error('Global CSS update failed', error);
+      showError(t('Global CSS update failed'));
+    } finally {
+      setLoadingInput((current) => ({ ...current, global_css: false }));
+    }
+  };
+
+  const submitGlobalJs = async () => {
+    try {
+      setLoadingInput((current) => ({ ...current, global_js: true }));
+      const ok = await updateOption('global_js', inputs.global_js);
+      if (ok) {
+        showSuccess(t('Global JavaScript updated'));
+      }
+    } catch (error) {
+      console.error('Global JavaScript update failed', error);
+      showError(t('Global JavaScript update failed'));
+    } finally {
+      setLoadingInput((current) => ({ ...current, global_js: false }));
+    }
+  };
+
   const getOptions = async () => {
     const res = await API.get('/api/option/');
     const { success, message, data } = res.data;
-    if (success) {
-      let newInputs = {};
-      data.forEach((item) => {
-        if (item.key in inputs) {
-          if (item.key === 'DisplayInCurrencyEnabled' || item.key === 'DisplayTokenStatEnabled') {
-            newInputs[item.key] = item.value === 'true';
-          } else {
-            newInputs[item.key] = item.value;
-          }
-        }
-      });
-      setInputs(newInputs);
-      formAPISettingGeneral.current.setValues(newInputs);
-      formAPIPersonalization.current.setValues(newInputs);
-    } else {
+    if (!success) {
       showError(message);
+      return;
     }
+
+    const nextInputs = { ...defaultInputs };
+    data.forEach((item) => {
+      if (!(item.key in nextInputs)) {
+        return;
+      }
+      if (
+        item.key === 'DisplayInCurrencyEnabled' ||
+        item.key === 'DisplayTokenStatEnabled' ||
+        item.key === 'HideHeaderLogoEnabled' ||
+        item.key === 'HideHeaderTextEnabled'
+      ) {
+        nextInputs[item.key] = item.value === 'true';
+      } else {
+        nextInputs[item.key] = item.value;
+      }
+    });
+
+    setInputs(nextInputs);
+    formAPISettingGeneral.current?.setValues(nextInputs);
+    formAPIPersonalization.current?.setValues(nextInputs);
   };
 
   useEffect(() => {
     getOptions();
   }, []);
-
-  // Function to open GitHub release page
-  const openGitHubRelease = () => {
-    window.open(
-      `https://github.com/moehans-official/VeloeraCE/releases/tag/${updateData.tag_name}`,
-      '_blank',
-    );
-  };
-
-  const getStartTimeString = () => {
-    const timestamp = statusState?.status?.start_time;
-    return statusState.status ? timestamp2string(timestamp) : '';
-  };
 
   return (
     <Row>
@@ -327,64 +322,36 @@ const OtherSetting = () => {
           gap: '10px',
         }}
       >
-        {/* 版本信息 */}
-        <Form>
-          <Card>
-            <Form.Section text={t('系统信息')}>
-              <Row>
-                <Col span={16}>
-                  <Space>
-                    <Text>
-                      {t('当前版本')}：
-                      {statusState?.status?.version || t('未知')}
-                    </Text>
-                    <Button
-                      type='primary'
-                      onClick={checkUpdate}
-                      loading={loadingInput['CheckUpdate']}
-                    >
-                      {t('检查更新')}
-                    </Button>
-                  </Space>
-                </Col>
-              </Row>
-              <Row>
-                <Col span={16}>
-                  <Text>
-                    {t('启动时间')}：{getStartTimeString()}
-                  </Text>
-                </Col>
-              </Row>
-            </Form.Section>
-          </Card>
-        </Form>
-        {/* 通用设置 */}
         <Form
           values={inputs}
-          getFormApi={(formAPI) => (formAPISettingGeneral.current = formAPI)}
+          getFormApi={(formAPI) => {
+            formAPISettingGeneral.current = formAPI;
+          }}
         >
           <Card>
             <Form.Section text={t('通用设置')}>
               <Form.TextArea
                 label={t('公告')}
                 placeholder={t(
-                  '在此输入新的公告内容，支持 Markdown & HTML 代码',
+                  '在此输入新的公告内容，支持 Markdown 和 HTML 代码。',
                 )}
                 field={'Notice'}
                 onChange={handleInputChange}
                 style={{ fontFamily: 'JetBrains Mono, Consolas' }}
                 autosize={{ minRows: 6, maxRows: 12 }}
               />
-              <Button onClick={submitNotice} loading={loadingInput['Notice']}>
+              <Button onClick={submitNotice} loading={loadingInput.Notice}>
                 {t('设置公告')}
               </Button>
             </Form.Section>
           </Card>
         </Form>
-        {/* 个性化设置 */}
+
         <Form
           values={inputs}
-          getFormApi={(formAPI) => (formAPIPersonalization.current = formAPI)}
+          getFormApi={(formAPI) => {
+            formAPIPersonalization.current = formAPI;
+          }}
         >
           <Card>
             <Form.Section text={t('个性化设置')}>
@@ -396,23 +363,61 @@ const OtherSetting = () => {
               />
               <Button
                 onClick={submitSystemName}
-                loading={loadingInput['SystemName']}
+                loading={loadingInput.SystemName}
               >
                 {t('设置系统名称')}
               </Button>
+
               <Form.Input
                 label={t('Logo 图片地址')}
                 placeholder={t('在此输入 Logo 图片地址')}
                 field={'Logo'}
                 onChange={handleInputChange}
               />
-              <Button onClick={submitLogo} loading={loadingInput['Logo']}>
+              <Button onClick={submitLogo} loading={loadingInput.Logo}>
                 {t('设置 Logo')}
               </Button>
+
+              <Form.Input
+                label={t('Logo 名称颜色（调试）')}
+                placeholder={t(
+                  '仅支持十六进制颜色，如 #1677ff。留空可恢复默认渐变。',
+                )}
+                field={'SystemNameColor'}
+                onChange={handleInputChange}
+              />
+              <Row style={{ marginTop: 8, marginBottom: 16 }}>
+                <Col
+                  span={24}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+                >
+                  <Button
+                    onClick={submitSystemNameColor}
+                    loading={loadingInput.SystemNameColor}
+                  >
+                    {t('设置 Logo 名称颜色')}
+                  </Button>
+                  <div
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 4,
+                      border: '1px solid var(--semi-color-border)',
+                      backgroundColor: isValidHexColor(inputs.SystemNameColor)
+                        ? inputs.SystemNameColor
+                        : 'transparent',
+                    }}
+                  />
+                  <Text type='tertiary'>
+                    {inputs.SystemNameColor || t('使用默认渐变')}
+                  </Text>
+                </Col>
+              </Row>
+
               <Form.TextArea
                 label={t('首页内容')}
                 placeholder={t(
-                  '在此输入首页内容，支持 Markdown & HTML 代码，设置后首页的状态信息将不再显示。如果输入的是一个链接，则会使用该链接作为 iframe 的 src 属性，这允许你设置任意网页作为首页',
+                  '在此输入首页内容，支持 Markdown 和 HTML 代码。',
                 )}
                 field={'HomePageContent'}
                 onChange={handleInputChange}
@@ -421,92 +426,108 @@ const OtherSetting = () => {
               />
               <Button
                 onClick={() => submitOption('HomePageContent')}
-                loading={loadingInput['HomePageContent']}
+                loading={loadingInput.HomePageContent}
               >
                 {t('设置首页内容')}
               </Button>
+
               <Form.TextArea
                 label={t('关于')}
                 placeholder={t(
-                  '在此输入新的关于内容，支持 Markdown & HTML 代码。如果输入的是一个链接，则会使用该链接作为 iframe 的 src 属性，这允许你设置任意网页作为关于页面',
+                  '在此输入关于内容，支持 Markdown 和 HTML 代码。',
                 )}
                 field={'About'}
                 onChange={handleInputChange}
                 style={{ fontFamily: 'JetBrains Mono, Consolas' }}
                 autosize={{ minRows: 6, maxRows: 12 }}
               />
-              <Button onClick={submitAbout} loading={loadingInput['About']}>
+              <Button onClick={submitAbout} loading={loadingInput.About}>
                 {t('设置关于')}
               </Button>
-              {/*  */}
+
               <Banner
                 fullMode={false}
                 type='info'
                 description={t(
-                  '移除 Veloera 的版权标识不可在此处进行，且移除必须首先获得授权，项目维护需要花费大量精力，如果本项目对你有意义，请主动支持本项目',
+                  '移除 Veloera 的版权标识不可在此处进行，如需处理请先获得授权。',
                 )}
                 closeIcon={null}
                 style={{ marginTop: 15 }}
               />
+
               <Form.Input
                 label={t('页脚')}
                 placeholder={t(
-                  '在此输入新的页脚，留空则使用默认页脚，支持 HTML 代码',
+                  '在此输入新的页脚，留空则使用默认页脚，支持 HTML 代码。',
                 )}
                 field={'Footer'}
                 onChange={handleInputChange}
               />
-              <Button onClick={submitFooter} loading={loadingInput['Footer']}>
+              <Button onClick={submitFooter} loading={loadingInput.Footer}>
                 {t('设置页脚')}
               </Button>
+
               <Form.TextArea
                 label={t('自定义头部 HTML')}
-                placeholder={t(
-                  '在此输入自定义 HTML 头部内容，将替换页面中的占位符'
-                )}
+                placeholder={t('在此输入自定义 HTML 头部内容。')}
                 field={'custom_head_html'}
                 onChange={handleInputChange}
                 style={{ fontFamily: 'JetBrains Mono, Consolas' }}
                 autosize={{ minRows: 6, maxRows: 12 }}
               />
-              <Button onClick={submitCustomHeadHtml} loading={loadingInput['custom_head_html']}>
+              <Button
+                onClick={submitCustomHeadHtml}
+                loading={loadingInput.custom_head_html}
+              >
                 {t('设置自定义头部 HTML')}
               </Button>
+
               <Form.TextArea
                 label={t('全局 CSS 样式')}
-                placeholder={t(
-                  '在此输入自定义 CSS 样式代码'
-                )}
+                placeholder={t('在此输入自定义 CSS 样式代码。')}
                 field={'global_css'}
                 onChange={handleInputChange}
                 style={{ fontFamily: 'JetBrains Mono, Consolas' }}
                 autosize={{ minRows: 6, maxRows: 12 }}
               />
-              <Button onClick={submitGlobalCss} loading={loadingInput['global_css']}>
+              <Button
+                onClick={submitGlobalCss}
+                loading={loadingInput.global_css}
+              >
                 {t('设置全局 CSS 样式')}
               </Button>
+
               <Form.TextArea
                 label={t('全局 JavaScript 代码')}
-                placeholder={t(
-                  '在此输入自定义 JavaScript 代码'
-                )}
+                placeholder={t('在此输入自定义 JavaScript 代码。')}
                 field={'global_js'}
                 onChange={handleInputChange}
                 style={{ fontFamily: 'JetBrains Mono, Consolas' }}
                 autosize={{ minRows: 6, maxRows: 12 }}
               />
-              <Button onClick={submitGlobalJs} loading={loadingInput['global_js']}>
+              <Button onClick={submitGlobalJs} loading={loadingInput.global_js}>
                 {t('设置全局 JavaScript 代码')}
               </Button>
             </Form.Section>
+
             <Form.Section text={t('显示设置')}>
-              <Space vertical align='start' style={{ width: '100%' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  width: '100%',
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Switch
                     checked={inputs.DisplayInCurrencyEnabled}
                     onChange={async (checked) => {
-                      setInputs({ ...inputs, DisplayInCurrencyEnabled: checked });
-                      await updateOption('DisplayInCurrencyEnabled', checked.toString());
+                      setInputs((current) => ({
+                        ...current,
+                        DisplayInCurrencyEnabled: checked,
+                      }));
+                      await updateOption('DisplayInCurrencyEnabled', checked);
                     }}
                   />
                   <Text>{t('以货币形式显示配额')}</Text>
@@ -515,36 +536,56 @@ const OtherSetting = () => {
                   <Switch
                     checked={inputs.DisplayTokenStatEnabled}
                     onChange={async (checked) => {
-                      setInputs({ ...inputs, DisplayTokenStatEnabled: checked });
-                      await updateOption('DisplayTokenStatEnabled', checked.toString());
+                      setInputs((current) => ({
+                        ...current,
+                        DisplayTokenStatEnabled: checked,
+                      }));
+                      await updateOption('DisplayTokenStatEnabled', checked);
                     }}
                   />
                   <Text>{t('显示 Token 统计信息')}</Text>
                 </div>
-              </Space>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Switch
+                    checked={inputs.HideHeaderLogoEnabled}
+                    onChange={async (checked) => {
+                      setInputs((current) => ({
+                        ...current,
+                        HideHeaderLogoEnabled: checked,
+                      }));
+                      await updateOption('HideHeaderLogoEnabled', checked);
+                      localStorage.setItem(
+                        'hide_header_logo_enabled',
+                        checked ? 'true' : 'false',
+                      );
+                      window.dispatchEvent(new Event('brandingUpdated'));
+                    }}
+                  />
+                  <Text>{t('隐藏标题 Logo')}</Text>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Switch
+                    checked={inputs.HideHeaderTextEnabled}
+                    onChange={async (checked) => {
+                      setInputs((current) => ({
+                        ...current,
+                        HideHeaderTextEnabled: checked,
+                      }));
+                      await updateOption('HideHeaderTextEnabled', checked);
+                      localStorage.setItem(
+                        'hide_header_text_enabled',
+                        checked ? 'true' : 'false',
+                      );
+                      window.dispatchEvent(new Event('brandingUpdated'));
+                    }}
+                  />
+                  <Text>{t('隐藏标题文字')}</Text>
+                </div>
+              </div>
             </Form.Section>
           </Card>
         </Form>
       </Col>
-      <Modal
-        title={t('新版本') + '：' + updateData.tag_name}
-        visible={showUpdateModal}
-        onCancel={() => setShowUpdateModal(false)}
-        footer={[
-          <Button
-            key='details'
-            type='primary'
-            onClick={() => {
-              setShowUpdateModal(false);
-              openGitHubRelease();
-            }}
-          >
-            {t('详情')}
-          </Button>,
-        ]}
-      >
-        <div dangerouslySetInnerHTML={{ __html: updateData.content }}></div>
-      </Modal>
     </Row>
   );
 };

@@ -28,6 +28,7 @@ import (
 var StartTime = time.Now().Unix() // unit: second
 var Version = "v0.0.0"            // this hard coding will be replaced automatically when building, no need to manually change
 var SystemName = "Veloera"
+var SystemNameColor = ""
 var Footer = ""
 var Logo = ""
 var TopUpLink = ""
@@ -37,6 +38,8 @@ var TopUpLink = ""
 var QuotaPerUnit = 500 * 1000.0 // $0.002 / 1K tokens
 var DisplayInCurrencyEnabled = true
 var DisplayTokenStatEnabled = true
+var HideHeaderLogoEnabled = false
+var HideHeaderTextEnabled = false
 var DrawingEnabled = true
 var TaskEnabled = true
 var DataExportEnabled = true
