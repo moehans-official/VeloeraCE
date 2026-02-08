@@ -60,13 +60,13 @@ cd VeloeraCE
 cp .env.example .env
 ```
 
-3. Build local image (recommended to run current CE source)
+3. Pull prebuilt image from Docker Hub
 
 ```bash
-docker build -t veloerace:local .
+docker pull veloerace/veloerace:latest
 ```
 
-4. Update `veloera.image` in `docker-compose.yml` to `veloerace:local`
+4. Ensure `veloera.image` in `docker-compose.yml` is `veloerace/veloerace:latest`
 
 5. Start services
 

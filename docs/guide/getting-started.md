@@ -15,8 +15,8 @@
 git clone https://github.com/moehans-official/VeloeraCE.git
 cd VeloeraCE
 cp .env.example .env
-docker build -t veloerace:local .
-# 修改 docker-compose.yml 中 image 为 veloerace:local
+docker pull veloerace/veloerace:latest
+# docker-compose.yml 默认 image 已配置为 veloerace/veloerace:latest
 docker compose up -d
 ```
 

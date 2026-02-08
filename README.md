@@ -58,13 +58,13 @@ cd VeloeraCE
 cp .env.example .env
 ```
 
-3. 构建本地镜像（推荐使用 CE 当前代码）
+3. 拉取预构建镜像（Docker Hub）
 
 ```bash
-docker build -t veloerace:local .
+docker pull veloerace/veloerace:latest
 ```
 
-4. 修改 `docker-compose.yml` 中 `veloera.image` 为 `veloerace:local`
+4. 确认 `docker-compose.yml` 中 `veloera.image` 为 `veloerace/veloerace:latest`
 
 5. 启动服务
 

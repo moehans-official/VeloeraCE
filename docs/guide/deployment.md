@@ -22,8 +22,8 @@ cp .env.example .env
 3. 构建并启动
 
 ```bash
-docker build -t veloerace:local .
-# 修改 docker-compose.yml 的 image 为 veloerace:local
+docker pull veloerace/veloerace:latest
+# docker-compose.yml 默认 image 已配置为 veloerace/veloerace:latest
 docker compose up -d
 ```
 
